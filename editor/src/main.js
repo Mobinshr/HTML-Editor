@@ -212,8 +212,8 @@ function renderPreview() {
   if (Array.isArray(tab.projectPath) && tab.projectPath.length) {
     const basePath = tab.projectPath.slice(0, -1).map(part => encodeURIComponent(part)).join("/");
     const baseTag = `<base href="https://appassets.androidplatform.net/project/${basePath ? basePath + "/" : ""}">`;
-    if (/<base\\b[^>]*>/i.test(source)) source = source.replace(/<base\\b[^>]*>/i, baseTag);
-    else if (/<head\\b[^>]*>/i.test(source)) source = source.replace(/<head\\b[^>]*>/i, match => match + baseTag);
+    if (/<base\b[^>]*>/i.test(source)) source = source.replace(/<base\b[^>]*>/i, baseTag);
+    else if (/<head\b[^>]*>/i.test(source)) source = source.replace(/<head\b[^>]*>/i, match => match + baseTag);
     else source = baseTag + source;
   }
   previewFrame.srcdoc = source;
