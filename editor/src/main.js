@@ -186,9 +186,9 @@ function renderFolderItems() {
     open.onclick=()=>{ if(item.directory){ currentFolderPath.push(item.name); NativeBridge.listFolder(JSON.stringify(currentFolderPath)); } else NativeBridge.readFile(item.uri); };
     const actions=document.createElement("div"); actions.className="file-actions";
     const rename=document.createElement("button"); rename.className="mini-action"; rename.textContent="✎";
-    rename.onclick=()=>{const name=window.prompt(t("renamePrompt"),item.name);if(name)NativeBridge.renameEntry(item.uri,name);};
+    rename.onclick=()=>{const name=window.prompt(t("renamePrompt"),item.name);if(name)NativeBridge.renameEntry(item.uri,name,JSON.stringify(currentFolderPath));};
     const del=document.createElement("button"); del.className="mini-action danger"; del.textContent="⌫";
-    del.onclick=()=>{if(window.confirm(t("deleteConfirm")))NativeBridge.deleteEntry(item.uri);};
+    del.onclick=()=>{if(window.confirm(t("deleteConfirm")))NativeBridge.deleteEntry(item.uri,JSON.stringify(currentFolderPath));};
     actions.append(rename,del); row.append(open,actions); host.append(row);
   });
 }
