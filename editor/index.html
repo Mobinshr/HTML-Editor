@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <title>HTML Editor</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand-mark" aria-hidden="true">&lt;/&gt;</div>
+        <div class="file-heading">
+          <strong>HTML Editor</strong>
+          <span id="active-file">Untitled.html</span>
+        </div>
+        <span class="stage-label" id="language-label">HTML</span>
+      </header>
+      <main id="editor-shell">
+        <div id="editor"></div>
+      </main>
+      <footer class="statusbar">
+        <span id="status-language">HTML</span>
+        <span id="cursor-status">Ln 1, Col 1</span>
+        <span id="status-ready">Ready</span>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
