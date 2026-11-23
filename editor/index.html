@@ -33,7 +33,7 @@
     <div id="drawer-scrim" class="scrim"></div>
     <aside id="file-drawer" class="drawer" aria-hidden="true">
       <div class="drawer-header">
-        <div><strong data-i18n="fileManager">مدیریت فایل‌ها</strong><small id="folder-label" data-i18n="noFolder">پوشه‌ای انتخاب نشده</small></div>
+        <div class="folder-heading"><strong data-i18n="fileManager">مدیریت فایل‌ها</strong><small id="folder-label" data-i18n="noFolder">پوشه‌ای انتخاب نشده</small></div>
         <button id="close-drawer" class="icon-button" aria-label="Close">×</button>
       </div>
       <div class="drawer-actions">
@@ -42,7 +42,10 @@
         <button id="new-folder" class="tool-button" data-i18n="newFolder">پوشه جدید</button>
       </div>
       <section class="drawer-section"><h3 data-i18n="openTabs">تب‌های باز</h3><div id="open-file-list"></div></section>
-      <section class="drawer-section"><h3 data-i18n="folderContents">محتویات پوشه</h3><div id="folder-file-list" class="file-list"></div></section>
+      <section class="drawer-section folder-browser">
+        <div class="folder-toolbar"><button id="folder-up" class="tool-button" hidden>← <span data-i18n="up">بازگشت</span></button><span id="folder-path" class="folder-path"></span></div>
+        <h3 data-i18n="folderContents">محتویات پوشه</h3><div id="folder-file-list" class="file-list"></div>
+      </section>
     </aside>
     <script type="module" src="/src/main.js"></script>
   </body>
