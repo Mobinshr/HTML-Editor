@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="editor_primary">#4969D8</color>
+    <color name="editor_primary_dark">#304AAB</color>
+    <color name="editor_surface_light">#F7F8FC</color>
+    <color name="editor_surface_dark">#111318</color>
+</resources>
