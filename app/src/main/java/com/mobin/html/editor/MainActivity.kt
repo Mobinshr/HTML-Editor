@@ -161,7 +161,7 @@ class MainActivity : AppCompatActivity() {
             return try {
                 val segments = path.split('/').filter { it.isNotBlank() }.map { Uri.decode(it) }
                 if (segments.isEmpty() || segments.any {
-                        it == "." || it == ".." || it.contains('/') || it.contains('\\\\') || it.contains('\u0000')
+                        it == "." || it == ".." || it.contains('/') || it.contains('\\') || it.contains('\u0000')
                     }) return null
 
                 var current = folderRoot() ?: return null
