@@ -40,7 +40,9 @@ document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dat
 let tabs = [{ id: 1, name: locale === "fa" ? "بدون‌نام.html" : "Untitled.html", text: "", uri: null, dirty: false }];
 let activeId = 1;
 let nextId = 2;
-let folderItems = [];\nlet pendingSaveTabId = null;\nlet pendingCloseId = null;
+let folderItems = [];
+let pendingSaveTabId = null;
+let pendingCloseId = null;
 const activeTab = () => tabs.find(tab => tab.id === activeId);
 const extensionFor = name => (name.split(".").pop() || "html").toLowerCase();
 const languageFor = name => ({htm:"HTML",html:"HTML",css:"CSS",js:"JavaScript",mjs:"JavaScript",json:"JSON",xml:"XML",md:"Markdown",markdown:"Markdown"}[extensionFor(name)] || "HTML");
