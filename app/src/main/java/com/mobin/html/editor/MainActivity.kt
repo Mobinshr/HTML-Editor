@@ -31,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private val assetLoader by lazy {
         WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .addPathHandler("/project/", ProjectPathHandler())
             .build()
     }
 
@@ -125,12 +126,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
         @JavascriptInterface fun listFolder(pathJson: String) { this@MainActivity.listFolder(pathJson) }
-        @JavascriptInterface fun readFile(uriText: String) {
+        @JavascriptInterface fun readFile(uriText: String, projectPathJson: String) {
             io.execute {
                 val result = try {
                     val uri = Uri.parse(uriText)
                     val text = contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
                     JSONObject().put("ok", true).put("uri", uriText).put("name", displayName(uri)).put("text", text)
+                        .put("projectPath", JSONArray(projectPathJson))
                 } catch (e: Exception) { JSONObject().put("ok", false).put("error", e.message ?: "Unable to read file") }
                 runOnUiThread { callJs("onOpenResult", result) }
             }
@@ -151,6 +153,27 @@ class MainActivity : AppCompatActivity() {
             val file = DocumentFile.fromSingleUri(this@MainActivity, Uri.parse(uriText))
             val ok = file?.delete() == true
             listFolder(pathJson, JSONObject().put("message", if (ok) "deleted" else "delete_failed"))
+        }
+    }
+
+    private inner class ProjectPathHandler : WebViewAssetLoader.PathHandler {
+        override fun handle(path: String): android.webkit.WebResourceResponse? {
+            return try {
+                val root = folderRoot() ?: return null
+                val decoded = Uri.decode(path)
+                val segments = decoded.split('/').filter { it.isNotBlank() }
+                if (segments.isEmpty() || segments.any { it == "." || it == ".." || it.contains('\\\\') }) return null
+                var current = root
+                for (segment in segments.dropLast(1)) {
+                    current = current.findFile(segment)?.takeIf { it.isDirectory } ?: return null
+                }
+                val file = current.findFile(segments.last())?.takeIf { it.isFile } ?: return null
+                val mime = file.type ?: mimeFor(file.name ?: "")
+                val stream = contentResolver.openInputStream(file.uri) ?: return null
+                android.webkit.WebResourceResponse(mime, "UTF-8", stream)
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 
