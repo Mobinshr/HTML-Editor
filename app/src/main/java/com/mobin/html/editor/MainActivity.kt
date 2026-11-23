@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity() {
                 this@MainActivity.chooseFolder.launch(intent)
             }
         }
-        @JavascriptInterface fun listFolder() { this@MainActivity.listFolder() }
+        @JavascriptInterface fun listFolder(pathJson: String) { this@MainActivity.listFolder(pathJson) }
         @JavascriptInterface fun readFile(uriText: String) {
             io.execute {
                 val result = try {
@@ -135,22 +135,22 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread { callJs("onOpenResult", result) }
             }
         }
-        @JavascriptInterface fun createEntry(name: String, directory: Boolean) {
-            val root = folderRoot() ?: return
+        @JavascriptInterface fun createEntry(name: String, directory: Boolean, pathJson: String) {
+            val parent = folderAt(pathJson) ?: return
             val safeName = name.trim().takeIf { it.isNotEmpty() && !it.contains("/") && !it.contains("\\") } ?: return
-            val created = if (directory) root.createDirectory(safeName) else root.createFile(mimeFor(safeName), safeName)
-            listFolder(JSONObject().put("message", if (created != null) "created" else "create_failed"))
+            val created = if (directory) parent.createDirectory(safeName) else parent.createFile(mimeFor(safeName), safeName)
+            listFolder(pathJson, JSONObject().put("message", if (created != null) "created" else "create_failed"))
         }
         @JavascriptInterface fun renameEntry(uriText: String, name: String) {
             val file = DocumentFile.fromSingleUri(this@MainActivity, Uri.parse(uriText))
             val safeName = name.trim().takeIf { it.isNotEmpty() && !it.contains("/") && !it.contains("\\") }
             val ok = safeName != null && file?.renameTo(safeName) == true
-            listFolder(JSONObject().put("message", if (ok) "renamed" else "rename_failed"))
+            listFolder("[]", JSONObject().put("message", if (ok) "renamed" else "rename_failed"))
         }
         @JavascriptInterface fun deleteEntry(uriText: String) {
             val file = DocumentFile.fromSingleUri(this@MainActivity, Uri.parse(uriText))
             val ok = file?.delete() == true
-            listFolder(JSONObject().put("message", if (ok) "deleted" else "delete_failed"))
+            listFolder("[]", JSONObject().put("message", if (ok) "deleted" else "delete_failed"))
         }
     }
 
@@ -159,15 +159,31 @@ class MainActivity : AppCompatActivity() {
         return DocumentFile.fromTreeUri(this, Uri.parse(value))
     }
 
-    private fun listFolder(extra: JSONObject = JSONObject()) {
+    private fun folderAt(pathJson: String): DocumentFile? {
+        var current = folderRoot() ?: return null
+        val path = try { JSONArray(pathJson) } catch (_: Exception) { JSONArray() }
+        for (index in 0 until path.length()) {
+            val child = current.findFile(path.optString(index)) ?: return null
+            if (!child.isDirectory) return null
+            current = child
+        }
+        return current
+    }
+
+    private fun listFolder(pathJson: String = "[]", extra: JSONObject = JSONObject()) {
         io.execute {
             val items = JSONArray()
-            val root = folderRoot()
-            root?.listFiles()?.sortedWith(compareByDescending<DocumentFile> { it.isDirectory }.thenBy { it.name?.lowercase() ?: "" })?.forEach { file ->
+            val path = try { JSONArray(pathJson) } catch (_: Exception) { JSONArray() }
+            val current = folderAt(pathJson)
+            current?.listFiles()?.sortedWith(compareByDescending<DocumentFile> { it.isDirectory }.thenBy { it.name?.lowercase() ?: "" })?.forEach { file ->
                 items.put(JSONObject().put("name", file.name ?: "Unnamed").put("uri", file.uri.toString())
                     .put("directory", file.isDirectory).put("mime", file.type ?: ""))
             }
-            val result = JSONObject().put("ok", root != null).put("folder", root?.name ?: "").put("items", items).put("extra", extra)
+            val pathNames = JSONArray()
+            for (index in 0 until path.length()) pathNames.put(path.optString(index))
+            val result = JSONObject().put("ok", current != null)
+                .put("folder", current?.name ?: "").put("path", pathNames)
+                .put("items", items).put("extra", extra)
             runOnUiThread { callJs("onFolderListed", result) }
         }
     }
