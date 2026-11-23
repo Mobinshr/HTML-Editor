@@ -1,5 +1,5 @@
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
+import { EditorView, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from "@codemirror/view";
+import { EditorState, Compartment } from "@codemirror/state";
 import { basicSetup } from "codemirror";
 import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
@@ -8,18 +8,27 @@ import { json } from "@codemirror/lang-json";
 import { xml } from "@codemirror/lang-xml";
 import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { direction, translate } from "./i18n.js";
 import "./style.css";
 
-const starterDocument = "";
 const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+const themeCompartment = new Compartment();
 const languageExtensions = {
   html: html(),
+  htm: html(),
   css: css(),
   js: javascript(),
+  mjs: javascript(),
   json: json(),
   xml: xml(),
-  md: markdown()
+  md: markdown(),
+  markdown: markdown()
 };
+
+document.documentElement.lang = direction === "rtl" ? "fa" : "en";
+document.documentElement.dir = direction;
+document.getElementById("active-file").textContent = translate("untitled");
+document.getElementById("status-ready").textContent = translate("ready");
 
 function currentLanguage() {
   const extension = (document.getElementById("active-file").textContent.split(".").pop() || "html").toLowerCase();
@@ -29,13 +38,14 @@ function currentLanguage() {
 const editor = new EditorView({
   parent: document.getElementById("editor"),
   state: EditorState.create({
-    doc: starterDocument,
+    doc: "",
     extensions: [
       basicSetup,
       lineNumbers(),
       highlightActiveLine(),
       highlightActiveLineGutter(),
       currentLanguage(),
+      themeCompartment.of(darkQuery.matches ? oneDark : []),
       EditorView.lineWrapping,
       EditorView.updateListener.of((update) => {
         if (update.selectionSet || update.docChanged) updateCursorStatus(update.view);
@@ -60,15 +70,14 @@ function updateCursorStatus(view) {
 function applyColorScheme() {
   document.documentElement.dataset.theme = darkQuery.matches ? "dark" : "light";
   editor.dispatch({
-    effects: EditorView.theme({
-      "&": { color: darkQuery.matches ? "#D8DEE9" : "#242936" }
-    })
+    effects: themeCompartment.reconfigure(darkQuery.matches ? oneDark : [])
   });
 }
 
 darkQuery.addEventListener?.("change", applyColorScheme);
 applyColorScheme();
 updateCursorStatus(editor);
+
 window.htmlEditor = Object.freeze({
   getText: () => editor.state.doc.toString(),
   focus: () => editor.focus()
