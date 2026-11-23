@@ -162,7 +162,7 @@ class MainActivity : AppCompatActivity() {
                 val root = folderRoot() ?: return null
                 val decoded = Uri.decode(path)
                 val segments = decoded.split('/').filter { it.isNotBlank() }
-                if (segments.isEmpty() || segments.any { it == "." || it == ".." || it.contains('\\\\') }) return null
+                if (segments.isEmpty() || segments.any { it == "." || it == ".." || it.contains('\\') }) return null
                 var current = root
                 for (segment in segments.dropLast(1)) {
                     current = current.findFile(segment)?.takeIf { it.isDirectory } ?: return null
