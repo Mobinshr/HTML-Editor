@@ -38,7 +38,8 @@ body { background: var(--background); color: var(--text); }
   padding: 5px 9px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 #editor-shell { flex: 1; min-height: 0; background: var(--background); }
-#editor, .cm-editor { height: 100%; }
+#editor, .cm-editor { height: 100%; direction: ltr; text-align: left; }
+.cm-content, .cm-line { direction: ltr; text-align: left; }
 .cm-editor { background: var(--background); color: var(--text); }
 .cm-editor .cm-gutters { color: var(--muted); }
 .statusbar {
