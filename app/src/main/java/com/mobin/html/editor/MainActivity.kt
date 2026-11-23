@@ -159,18 +159,22 @@ class MainActivity : AppCompatActivity() {
     private inner class ProjectPathHandler : WebViewAssetLoader.PathHandler {
         override fun handle(path: String): android.webkit.WebResourceResponse? {
             return try {
-                val root = folderRoot() ?: return null
-                val decoded = Uri.decode(path)
-                val segments = decoded.split('/').filter { it.isNotBlank() }
-                if (segments.isEmpty() || segments.any { it == "." || it == ".." || it.contains('\\') }) return null
-                var current = root
+                val segments = path.split('/').filter { it.isNotBlank() }.map { Uri.decode(it) }
+                if (segments.isEmpty() || segments.any {
+                        it == "." || it == ".." || it.contains('/') || it.contains('\\\\') || it.contains('\u0000')
+                    }) return null
+
+                var current = folderRoot() ?: return null
                 for (segment in segments.dropLast(1)) {
                     current = current.findFile(segment)?.takeIf { it.isDirectory } ?: return null
                 }
                 val file = current.findFile(segments.last())?.takeIf { it.isFile } ?: return null
-                val mime = file.type ?: mimeFor(file.name ?: "")
+                val name = file.name ?: segments.last()
+                val mime = mimeFor(name)
                 val stream = contentResolver.openInputStream(file.uri) ?: return null
-                android.webkit.WebResourceResponse(mime, "UTF-8", stream)
+                val charset = if (mime.startsWith("text/") || mime.contains("javascript") ||
+                    mime.contains("json") || mime.contains("xml") || mime.contains("svg")) "UTF-8" else null
+                android.webkit.WebResourceResponse(mime, charset, stream)
             } catch (_: Exception) {
                 null
             }
@@ -222,10 +226,27 @@ class MainActivity : AppCompatActivity() {
         "html", "htm" -> "text/html"
         "css" -> "text/css"
         "js", "mjs" -> "text/javascript"
-        "json" -> "application/json"
+        "json", "map" -> "application/json"
         "xml" -> "application/xml"
         "md" -> "text/markdown"
-        else -> "text/plain"
+        "svg" -> "image/svg+xml"
+        "png" -> "image/png"
+        "jpg", "jpeg", "jpe" -> "image/jpeg"
+        "gif" -> "image/gif"
+        "webp" -> "image/webp"
+        "avif" -> "image/avif"
+        "bmp" -> "image/bmp"
+        "ico" -> "image/x-icon"
+        "woff" -> "font/woff"
+        "woff2" -> "font/woff2"
+        "ttf" -> "font/ttf"
+        "otf" -> "font/otf"
+        "eot" -> "application/vnd.ms-fontobject"
+        "mp3" -> "audio/mpeg"
+        "mp4" -> "video/mp4"
+        "webm" -> "video/webm"
+        "pdf" -> "application/pdf"
+        else -> "application/octet-stream"
     }
 
     private fun callJs(method: String, payload: JSONObject) {
