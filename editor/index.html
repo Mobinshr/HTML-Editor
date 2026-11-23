@@ -9,6 +9,7 @@
   <body>
     <div id="app">
       <header class="topbar">
+        <button class="icon-button menu-button" id="files-button" aria-label="Files">☰</button>
         <div class="brand-mark" aria-hidden="true">&lt;/&gt;</div>
         <div class="file-heading">
           <strong>HTML Editor</strong>
@@ -16,15 +17,33 @@
         </div>
         <span class="stage-label" id="language-label">HTML</span>
       </header>
-      <main id="editor-shell">
-        <div id="editor"></div>
-      </main>
+      <nav id="tabs" class="tabs" aria-label="Open files"></nav>
+      <div class="actionbar">
+        <button id="open-button" class="tool-button">＋ <span data-i18n="open">بازکردن</span></button>
+        <button id="save-button" class="tool-button">↓ <span data-i18n="save">ذخیره</span></button>
+        <button id="saveas-button" class="tool-button">↧ <span data-i18n="saveAs">ذخیره با نام</span></button>
+      </div>
+      <main id="editor-shell"><div id="editor"></div></main>
       <footer class="statusbar">
         <span id="status-language">HTML</span>
         <span id="cursor-status">Ln 1, Col 1</span>
-        <span id="status-ready">Ready</span>
+        <span id="status-ready">آماده</span>
       </footer>
     </div>
+    <div id="drawer-scrim" class="scrim"></div>
+    <aside id="file-drawer" class="drawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div><strong data-i18n="fileManager">مدیریت فایل‌ها</strong><small id="folder-label" data-i18n="noFolder">پوشه‌ای انتخاب نشده</small></div>
+        <button id="close-drawer" class="icon-button" aria-label="Close">×</button>
+      </div>
+      <div class="drawer-actions">
+        <button id="choose-folder" class="tool-button" data-i18n="chooseFolder">انتخاب پوشه</button>
+        <button id="new-file" class="tool-button" data-i18n="newFile">فایل جدید</button>
+        <button id="new-folder" class="tool-button" data-i18n="newFolder">پوشه جدید</button>
+      </div>
+      <section class="drawer-section"><h3 data-i18n="openTabs">تب‌های باز</h3><div id="open-file-list"></div></section>
+      <section class="drawer-section"><h3 data-i18n="folderContents">محتویات پوشه</h3><div id="folder-file-list" class="file-list"></div></section>
+    </aside>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
