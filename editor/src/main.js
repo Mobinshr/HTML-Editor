@@ -21,13 +21,13 @@ const languageExtensions = {
 const messages = {
   fa: { open:"بازکردن", save:"ذخیره", saveAs:"ذخیره با نام", fileManager:"مدیریت فایل‌ها", noFolder:"پوشه‌ای انتخاب نشده",
     chooseFolder:"انتخاب پوشه", newFile:"فایل جدید", newFolder:"پوشه جدید", openTabs:"تب‌های باز",
-    folderContents:"محتویات پوشه", empty:"موردی وجود ندارد", saved:"ذخیره شد", unsaved:"ذخیره نشده",
+    folderContents:"محتویات پوشه", up:"بازگشت", root:"ریشه", empty:"موردی وجود ندارد", saved:"ذخیره شد", unsaved:"ذخیره نشده",
     confirmClose:"این فایل تغییر کرده است. قبل از بستن ذخیره شود؟", name:"نام فایل", error:"خطا",
     folderPrompt:"نام پوشه", filePrompt:"نام فایل جدید", deleteConfirm:"این مورد حذف شود؟",
     renamePrompt:"نام جدید", folderRequired:"ابتدا یک پوشه انتخاب کن.", ready:"آماده" },
   en: { open:"Open", save:"Save", saveAs:"Save as", fileManager:"File manager", noFolder:"No folder selected",
     chooseFolder:"Choose folder", newFile:"New file", newFolder:"New folder", openTabs:"Open tabs",
-    folderContents:"Folder contents", empty:"Nothing here", saved:"Saved", unsaved:"Unsaved",
+    folderContents:"Folder contents", up:"Back", root:"Root", empty:"Nothing here", saved:"Saved", unsaved:"Unsaved",
     confirmClose:"This file has changes. Save before closing?", name:"File name", error:"Error",
     folderPrompt:"Folder name", filePrompt:"New file name", deleteConfirm:"Delete this item?",
     renamePrompt:"New name", folderRequired:"Choose a folder first.", ready:"Ready" }
@@ -41,6 +41,7 @@ let tabs = [{ id: 1, name: locale === "fa" ? "بدون‌نام.html" : "Untitle
 let activeId = 1;
 let nextId = 2;
 let folderItems = [];
+let currentFolderPath = [];
 let pendingSaveTabId = null;
 let pendingCloseId = null;
 const activeTab = () => tabs.find(tab => tab.id === activeId);
@@ -128,11 +129,18 @@ function openTab(data) {
   const tab = { id:nextId++, name:data.name || "Untitled.html", text:data.text || "", uri:data.uri || null, dirty:false };
   tabs.push(tab); switchTab(tab.id);
 }
-function saveActive(asNew = false) {
-  const tab = activeTab(); if (!tab) return;
-  tab.text = editor.state.doc.toString();
+function saveActive(asNew = false, tabId = activeId) {
+  const tab = tabs.find(item => item.id === tabId); if (!tab) return;
+  if (tab.id === activeId) tab.text = editor.state.doc.toString();
+  pendingSaveTabId = tab.id;
   if (tab.uri && !asNew) NativeBridge.saveFile(tab.uri, tab.text);
   else NativeBridge.saveAs(tab.text, tab.name);
+}
+function finishClose(id) {
+  tabs = tabs.filter(item => item.id !== id);
+  if (!tabs.length) tabs.push({id:nextId++,name:locale==="fa"?"بدون‌نام.html":"Untitled.html",text:"",uri:null,dirty:false});
+  if (activeId === id) activeId = tabs[0].id;
+  switchTab(activeId);
 }
 function closeTab(id) {
   const tab = tabs.find(item => item.id === id); if (!tab) return;
@@ -150,7 +158,8 @@ function openDrawer() {
   document.getElementById("drawer-scrim").classList.add("visible");
   document.getElementById("file-drawer").setAttribute("aria-hidden","false");
   renderOpenFiles();
-  NativeBridge.listFolder();
+  currentFolderPath = [];
+  NativeBridge.listFolder(JSON.stringify(currentFolderPath));
 }
 function closeDrawer() {
   document.getElementById("file-drawer").classList.remove("visible");
@@ -174,7 +183,7 @@ function renderFolderItems() {
     const row=document.createElement("div"); row.className="file-row";
     const open=document.createElement("button"); open.className="file-open";
     open.textContent=(item.directory?"📁 ":"📄 ")+item.name;
-    open.onclick=()=>{ if(item.directory){ window.alert("Folder navigation will be added in the next iteration."); } else NativeBridge.readFile(item.uri); };
+    open.onclick=()=>{ if(item.directory){ currentFolderPath.push(item.name); NativeBridge.listFolder(JSON.stringify(currentFolderPath)); } else NativeBridge.readFile(item.uri); };
     const actions=document.createElement("div"); actions.className="file-actions";
     const rename=document.createElement("button"); rename.className="mini-action"; rename.textContent="✎";
     rename.onclick=()=>{const name=window.prompt(t("renamePrompt"),item.name);if(name)NativeBridge.renameEntry(item.uri,name);};
@@ -196,9 +205,10 @@ document.getElementById("drawer-scrim").onclick=closeDrawer;
 document.getElementById("open-button").onclick=()=>NativeBridge.openFile();
 document.getElementById("save-button").onclick=()=>saveActive(false);
 document.getElementById("saveas-button").onclick=()=>saveActive(true);
-document.getElementById("choose-folder").onclick=()=>NativeBridge.chooseFolder();
-document.getElementById("new-file").onclick=()=>{const name=window.prompt(t("filePrompt"),"new-file.html");if(name)NativeBridge.createEntry(name,false);};
-document.getElementById("new-folder").onclick=()=>{const name=window.prompt(t("folderPrompt"));if(name)NativeBridge.createEntry(name,true);};
+document.getElementById("choose-folder").onclick=()=>{currentFolderPath=[];NativeBridge.chooseFolder();};
+document.getElementById("folder-up").onclick=()=>{if(currentFolderPath.length){currentFolderPath.pop();NativeBridge.listFolder(JSON.stringify(currentFolderPath));}};
+document.getElementById("new-file").onclick=()=>{const name=window.prompt(t("filePrompt"),"new-file.html");if(name)NativeBridge.createEntry(name,false,JSON.stringify(currentFolderPath));};
+document.getElementById("new-folder").onclick=()=>{const name=window.prompt(t("folderPrompt"));if(name)NativeBridge.createEntry(name,true,JSON.stringify(currentFolderPath));};
 
 function parsePayload(payload) { try { return typeof payload==="string" ? JSON.parse(payload) : payload; } catch { return {}; } }
 window.htmlEditor = Object.freeze({
@@ -215,7 +225,10 @@ window.htmlEditor = Object.freeze({
   },
   onFolderListed(payload) {
     const data=parsePayload(payload); folderItems=data.items||[];
-    document.getElementById("folder-label").textContent=data.ok?(data.folder||"Selected folder"):t("noFolder");
+    currentFolderPath = Array.isArray(data.path) ? data.path : currentFolderPath;
+    document.getElementById("folder-label").textContent=data.ok?(data.folder||t("root")):t("noFolder");
+    document.getElementById("folder-up").hidden = currentFolderPath.length === 0;
+    document.getElementById("folder-path").textContent = currentFolderPath.length ? [t("root"), ...currentFolderPath].join("  /  ") : t("root");
     renderFolderItems();
   }
 });
