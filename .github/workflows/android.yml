@@ -3,12 +3,14 @@ name: Android CI
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -60,3 +62,22 @@ jobs:
           name: html-editor-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: html-editor-debug
+          path: release-assets
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: HTML Editor ${{ github.ref_name }}
+          generate_release_notes: true
+          files: release-assets/app-debug.apk
