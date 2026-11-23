@@ -1,0 +1,9 @@
+.gradle/
+.gradle-cache/
+.idea/
+local.properties
+**/build/
+editor/node_modules/
+app/src/main/assets/editor/
+*.iml
+.DS_Store
