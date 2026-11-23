@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.HtmlEditor" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/editor_primary</item>
+        <item name="colorPrimaryVariant">@color/editor_primary_dark</item>
+        <item name="colorSecondary">@color/editor_primary</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <item name="android:navigationBarColor">?android:colorBackground</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>
