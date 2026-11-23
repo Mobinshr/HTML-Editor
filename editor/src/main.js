@@ -40,7 +40,7 @@ document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dat
 let tabs = [{ id: 1, name: locale === "fa" ? "بدون‌نام.html" : "Untitled.html", text: "", uri: null, dirty: false }];
 let activeId = 1;
 let nextId = 2;
-let folderItems = [];
+let folderItems = [];\nlet pendingSaveTabId = null;\nlet pendingCloseId = null;
 const activeTab = () => tabs.find(tab => tab.id === activeId);
 const extensionFor = name => (name.split(".").pop() || "html").toLowerCase();
 const languageFor = name => ({htm:"HTML",html:"HTML",css:"CSS",js:"JavaScript",mjs:"JavaScript",json:"JSON",xml:"XML",md:"Markdown",markdown:"Markdown"}[extensionFor(name)] || "HTML");
@@ -135,13 +135,13 @@ function saveActive(asNew = false) {
 function closeTab(id) {
   const tab = tabs.find(item => item.id === id); if (!tab) return;
   if (tab.dirty) {
-    const answer = window.confirm(t("confirmClose"));
-    if (answer) { if (tab.uri) NativeBridge.saveFile(tab.uri, tab.text); else NativeBridge.saveAs(tab.text, tab.name); }
+    if (window.confirm(t("confirmClose"))) {
+      pendingCloseId = id;
+      saveActive(false, id);
+      return;
+    }
   }
-  tabs = tabs.filter(item => item.id !== id);
-  if (!tabs.length) tabs.push({id:nextId++,name:locale==="fa"?"بدون‌نام.html":"Untitled.html",text:"",uri:null,dirty:false});
-  if (activeId === id) activeId = tabs[Math.max(0,tabs.findIndex(item=>item.id===id)-1)]?.id || tabs[0].id;
-  switchTab(activeId);
+  finishClose(id);
 }
 function openDrawer() {
   document.getElementById("file-drawer").classList.add("visible");
@@ -202,9 +202,14 @@ function parsePayload(payload) { try { return typeof payload==="string" ? JSON.p
 window.htmlEditor = Object.freeze({
   onOpenResult(payload) { const data=parsePayload(payload); if(data.ok) {openTab(data);closeDrawer();} else if(!data.cancelled) window.alert(data.error||t("error")); },
   onSaveResult(payload) {
-    const data=parsePayload(payload); const tab=activeTab(); if(!tab)return;
-    if(data.ok){tab.uri=data.uri||tab.uri;tab.name=data.name||tab.name;tab.dirty=false;updateHeader();renderTabs();document.getElementById("status-ready").textContent=t("saved");}
-    else if(!data.cancelled) window.alert(data.error||t("error"));
+    const data=parsePayload(payload);
+    const tab=tabs.find(item=>item.id===pendingSaveTabId);
+    if(data.ok && tab){
+      tab.uri=data.uri||tab.uri;tab.name=data.name||tab.name;tab.dirty=false;
+      updateHeader();renderTabs();document.getElementById("status-ready").textContent=t("saved");
+      if(pendingCloseId===tab.id){const id=pendingCloseId;pendingCloseId=null;pendingSaveTabId=null;finishClose(id);}
+    } else if(!data.cancelled) window.alert(data.error||t("error"));
+    if(!data.ok){pendingCloseId=null;pendingSaveTabId=null;}
   },
   onFolderListed(payload) {
     const data=parsePayload(payload); folderItems=data.items||[];
