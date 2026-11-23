@@ -141,16 +141,16 @@ class MainActivity : AppCompatActivity() {
             val created = if (directory) parent.createDirectory(safeName) else parent.createFile(mimeFor(safeName), safeName)
             listFolder(pathJson, JSONObject().put("message", if (created != null) "created" else "create_failed"))
         }
-        @JavascriptInterface fun renameEntry(uriText: String, name: String) {
+        @JavascriptInterface fun renameEntry(uriText: String, name: String, pathJson: String) {
             val file = DocumentFile.fromSingleUri(this@MainActivity, Uri.parse(uriText))
             val safeName = name.trim().takeIf { it.isNotEmpty() && !it.contains("/") && !it.contains("\\") }
             val ok = safeName != null && file?.renameTo(safeName) == true
-            listFolder("[]", JSONObject().put("message", if (ok) "renamed" else "rename_failed"))
+            listFolder(pathJson, JSONObject().put("message", if (ok) "renamed" else "rename_failed"))
         }
-        @JavascriptInterface fun deleteEntry(uriText: String) {
+        @JavascriptInterface fun deleteEntry(uriText: String, pathJson: String) {
             val file = DocumentFile.fromSingleUri(this@MainActivity, Uri.parse(uriText))
             val ok = file?.delete() == true
-            listFolder("[]", JSONObject().put("message", if (ok) "deleted" else "delete_failed"))
+            listFolder(pathJson, JSONObject().put("message", if (ok) "deleted" else "delete_failed"))
         }
     }
 
