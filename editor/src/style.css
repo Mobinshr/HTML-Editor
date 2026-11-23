@@ -61,3 +61,11 @@ button{font:inherit;color:inherit;cursor:pointer}
  .cm-content{font-size:15px}
  .drawer{width:340px}
 }
+
+.folder-browser{display:flex;flex-direction:column;min-height:0;flex:1}
+.folder-toolbar{display:flex;align-items:center;gap:8px;min-height:34px;padding:0 3px 7px;border-bottom:1px solid var(--border);margin-bottom:7px}
+.folder-toolbar .tool-button{padding:5px 8px}
+.folder-path{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:10px}
+.folder-browser #folder-file-list{overflow:auto;min-height:0;flex:1}
+.folder-heading{min-width:0;max-width:calc(100% - 42px)}
+.folder-heading small{max-width:70vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
