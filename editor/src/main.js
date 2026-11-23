@@ -126,7 +126,7 @@ function switchTab(id) {
 function openTab(data) {
   const existing = data.uri ? tabs.find(tab => tab.uri === data.uri) : null;
   if (existing) { switchTab(existing.id); return; }
-  const tab = { id:nextId++, name:data.name || "Untitled.html", text:data.text || "", uri:data.uri || null, dirty:false };
+  const tab = { id:nextId++, name:data.name || "Untitled.html", text:data.text || "", uri:data.uri || null, projectPath:Array.isArray(data.projectPath) ? data.projectPath : null, dirty:false };
   tabs.push(tab); switchTab(tab.id);
 }
 function saveActive(asNew = false, tabId = activeId) {
@@ -183,7 +183,7 @@ function renderFolderItems() {
     const row=document.createElement("div"); row.className="file-row";
     const open=document.createElement("button"); open.className="file-open";
     open.textContent=(item.directory?"📁 ":"📄 ")+item.name;
-    open.onclick=()=>{ if(item.directory){ currentFolderPath.push(item.name); NativeBridge.listFolder(JSON.stringify(currentFolderPath)); } else NativeBridge.readFile(item.uri); };
+    open.onclick=()=>{ if(item.directory){ currentFolderPath.push(item.name); NativeBridge.listFolder(JSON.stringify(currentFolderPath)); } else NativeBridge.readFile(item.uri, JSON.stringify([...currentFolderPath, item.name])); };
     const actions=document.createElement("div"); actions.className="file-actions";
     const rename=document.createElement("button"); rename.className="mini-action"; rename.textContent="✎";
     rename.onclick=()=>{const name=window.prompt(t("renamePrompt"),item.name);if(name)NativeBridge.renameEntry(item.uri,name,JSON.stringify(currentFolderPath));};
@@ -208,7 +208,15 @@ function renderPreview() {
     previewFrame.srcdoc = `<!doctype html><html><body style="font-family:system-ui;padding:24px;color:#777;text-align:center">${message}</body></html>`;
     return;
   }
-  previewFrame.srcdoc = tab.text || "<!doctype html><html><body></body></html>";
+  let source = tab.text || "<!doctype html><html><body></body></html>";
+  if (Array.isArray(tab.projectPath) && tab.projectPath.length) {
+    const basePath = tab.projectPath.slice(0, -1).map(part => encodeURIComponent(part)).join("/");
+    const baseTag = `<base href="https://appassets.androidplatform.net/project/${basePath ? basePath + "/" : ""}">`;
+    if (/<base\\b[^>]*>/i.test(source)) source = source.replace(/<base\\b[^>]*>/i, baseTag);
+    else if (/<head\\b[^>]*>/i.test(source)) source = source.replace(/<head\\b[^>]*>/i, match => match + baseTag);
+    else source = baseTag + source;
+  }
+  previewFrame.srcdoc = source;
 }
 function schedulePreview() {
   if (!previewVisible) return;
