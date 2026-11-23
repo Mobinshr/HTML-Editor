@@ -24,13 +24,13 @@ const messages = {
     folderContents:"محتویات پوشه", up:"بازگشت", root:"ریشه", empty:"موردی وجود ندارد", saved:"ذخیره شد", unsaved:"ذخیره نشده",
     confirmClose:"این فایل تغییر کرده است. قبل از بستن ذخیره شود؟", name:"نام فایل", error:"خطا",
     folderPrompt:"نام پوشه", filePrompt:"نام فایل جدید", deleteConfirm:"این مورد حذف شود؟",
-    renamePrompt:"نام جدید", folderRequired:"ابتدا یک پوشه انتخاب کن.", ready:"آماده" },
+    renamePrompt:"نام جدید", folderRequired:"ابتدا یک پوشه انتخاب کن.", ready:"آماده", preview:"پیش‌نمایش", editor:"ویرایشگر", previewUnsupported:"پیش‌نمایش فقط برای فایل‌های HTML فعال است." },
   en: { open:"Open", save:"Save", saveAs:"Save as", fileManager:"File manager", noFolder:"No folder selected",
     chooseFolder:"Choose folder", newFile:"New file", newFolder:"New folder", openTabs:"Open tabs",
     folderContents:"Folder contents", up:"Back", root:"Root", empty:"Nothing here", saved:"Saved", unsaved:"Unsaved",
     confirmClose:"This file has changes. Save before closing?", name:"File name", error:"Error",
     folderPrompt:"Folder name", filePrompt:"New file name", deleteConfirm:"Delete this item?",
-    renamePrompt:"New name", folderRequired:"Choose a folder first.", ready:"Ready" }
+    renamePrompt:"New name", folderRequired:"Choose a folder first.", ready:"Ready", preview:"Preview", editor:"Editor", previewUnsupported:"Preview is available for HTML files only." }
 };
 const t = key => messages[locale]?.[key] || messages.en[key] || key;
 document.documentElement.lang = locale;
@@ -58,7 +58,7 @@ const editor = new EditorView({
     EditorView.updateListener.of(update => {
       if (update.docChanged) {
         const tab = activeTab();
-        if (tab) { tab.text = update.state.doc.toString(); tab.dirty = true; renderTabs(); updateHeader(); }
+        if (tab) { tab.text = update.state.doc.toString(); tab.dirty = true; renderTabs(); updateHeader(); schedulePreview(); }
       }
       if (update.selectionSet || update.docChanged) updateCursorStatus(update.view);
     }),
@@ -115,13 +115,13 @@ function switchTab(id) {
     EditorView.updateListener.of(update => {
       if (update.docChanged) {
         const current = activeTab();
-        if (current) { current.text = update.state.doc.toString(); current.dirty = true; renderTabs(); updateHeader(); }
+        if (current) { current.text = update.state.doc.toString(); current.dirty = true; renderTabs(); updateHeader(); schedulePreview(); }
       }
       if (update.selectionSet || update.docChanged) updateCursorStatus(update.view);
     }),
     EditorView.theme({"&":{height:"100%",fontSize:"14px"},".cm-scroller":{fontFamily:"ui-monospace, SFMono-Regular, Menlo, monospace",lineHeight:"1.65"},".cm-content":{padding:"18px 0",caretColor:"var(--accent)"},".cm-gutters":{border:"none",backgroundColor:"transparent"},".cm-activeLineGutter":{backgroundColor:"var(--active-line)"}})
   ]}));
-  renderTabs(); updateHeader(); editor.focus(); updateCursorStatus(editor);
+  renderTabs(); updateHeader(); schedulePreview(); editor.focus(); updateCursorStatus(editor);
 }
 function openTab(data) {
   const existing = data.uri ? tabs.find(tab => tab.uri === data.uri) : null;
@@ -192,6 +192,40 @@ function renderFolderItems() {
     actions.append(rename,del); row.append(open,actions); host.append(row);
   });
 }
+let previewVisible = false;
+let previewTimer = null;
+const previewFrame = document.getElementById("preview-frame");
+const previewShell = document.getElementById("preview-shell");
+const editorShell = document.getElementById("editor-shell");
+const previewButtonLabel = document.getElementById("preview-button-label");
+
+function renderPreview() {
+  const tab = activeTab();
+  if (!tab) return;
+  const extension = extensionFor(tab.name);
+  if (extension !== "html" && extension !== "htm") {
+    const message = t("previewUnsupported");
+    previewFrame.srcdoc = `<!doctype html><html><body style="font-family:system-ui;padding:24px;color:#777;text-align:center">${message}</body></html>`;
+    return;
+  }
+  previewFrame.srcdoc = tab.text || "<!doctype html><html><body></body></html>";
+}
+function schedulePreview() {
+  if (!previewVisible) return;
+  if (previewTimer) clearTimeout(previewTimer);
+  previewTimer = setTimeout(() => {
+    previewTimer = null;
+    renderPreview();
+  }, 250);
+}
+function setPreviewMode(visible) {
+  previewVisible = visible;
+  editorShell.hidden = visible;
+  previewShell.hidden = !visible;
+  previewButtonLabel.textContent = visible ? t("editor") : t("preview");
+  if (visible) renderPreview();
+}
+
 function applyTheme() {
   document.documentElement.dataset.theme = darkQuery.matches ? "dark" : "light";
   editor.dispatch({effects:themeCompartment.reconfigure(darkQuery.matches ? oneDark : [])});
@@ -199,6 +233,7 @@ function applyTheme() {
 darkQuery.addEventListener?.("change",applyTheme);
 applyTheme(); updateHeader(); updateCursorStatus(editor); renderTabs();
 
+document.getElementById("preview-button").onclick=()=>setPreviewMode(!previewVisible);
 document.getElementById("files-button").onclick=openDrawer;
 document.getElementById("close-drawer").onclick=closeDrawer;
 document.getElementById("drawer-scrim").onclick=closeDrawer;
