@@ -1,5 +1,9 @@
 # HTML Editor
 
+<p align="center">
+  <img src="assets/images/icon.svg" alt="HTML Editor app icon" width="180" />
+</p>
+
 A lightweight Android code editor for working with local web and text files. It combines a CodeMirror 6 editing surface with Android file access and an in-app HTML preview.
 
 ## Identity
