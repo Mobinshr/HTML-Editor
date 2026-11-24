@@ -1,6 +1,6 @@
 # HTML Editor
 
-**Latest app version:** 0.1.3 (versionCode 4)
+**Latest app version:** 0.1.4 (versionCode 5)
 
 <p align="center">
   <img src="assets/images/icon.png" alt="HTML Editor app icon" width="180" />
@@ -38,6 +38,7 @@ HTML, CSS, JavaScript, JSON, XML, and Markdown.
 - Open files through Android's system picker and save edited content.
 - HTML preview inside the app.
 - Persian and English interface text.
+- Custom orange-and-white launcher icon.
 
 ## Preview notes
 
