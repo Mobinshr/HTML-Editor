@@ -24,13 +24,13 @@ const messages = {
     folderContents:"محتویات پوشه", up:"بازگشت", root:"ریشه", empty:"موردی وجود ندارد", saved:"ذخیره شد", unsaved:"ذخیره نشده",
     confirmClose:"این فایل تغییر کرده است. قبل از بستن ذخیره شود؟", name:"نام فایل", error:"خطا",
     folderPrompt:"نام پوشه", filePrompt:"نام فایل جدید", deleteConfirm:"این مورد حذف شود؟",
-    renamePrompt:"نام جدید", folderRequired:"ابتدا یک پوشه انتخاب کن.", ready:"آماده", preview:"پیش‌نمایش", editor:"ویرایشگر", previewUnsupported:"پیش‌نمایش فقط برای فایل‌های HTML فعال است." },
+    renamePrompt:"نام جدید", folderRequired:"ابتدا یک پوشه انتخاب کن.", invalidName:"نام واردشده معتبر نیست.", createFailed:"ساخت فایل یا پوشه انجام نشد.", ready:"آماده", preview:"پیش‌نمایش", editor:"ویرایشگر", previewUnsupported:"پیش‌نمایش فقط برای فایل‌های HTML فعال است." },
   en: { open:"Open", save:"Save", saveAs:"Save as", fileManager:"File manager", noFolder:"No folder selected",
     chooseFolder:"Choose folder", newFile:"New file", newFolder:"New folder", openTabs:"Open tabs",
     folderContents:"Folder contents", up:"Back", root:"Root", empty:"Nothing here", saved:"Saved", unsaved:"Unsaved",
     confirmClose:"This file has changes. Save before closing?", name:"File name", error:"Error",
     folderPrompt:"Folder name", filePrompt:"New file name", deleteConfirm:"Delete this item?",
-    renamePrompt:"New name", folderRequired:"Choose a folder first.", ready:"Ready", preview:"Preview", editor:"Editor", previewUnsupported:"Preview is available for HTML files only." }
+    renamePrompt:"New name", folderRequired:"Choose a folder first.", invalidName:"The entered name is not valid.", createFailed:"Could not create the file or folder.", ready:"Ready", preview:"Preview", editor:"Editor", previewUnsupported:"Preview is available for HTML files only." }
 };
 const t = key => messages[locale]?.[key] || messages.en[key] || key;
 document.documentElement.lang = locale;
@@ -265,6 +265,10 @@ window.htmlEditor = Object.freeze({
       if(pendingCloseId===tab.id){const id=pendingCloseId;pendingCloseId=null;pendingSaveTabId=null;finishClose(id);}
     } else if(!data.cancelled) window.alert(data.error||t("error"));
     if(!data.ok){pendingCloseId=null;pendingSaveTabId=null;}
+  },
+  onEntryCreated(payload) {
+    const data=parsePayload(payload);
+    if (!data.ok) window.alert(t(data.error || "createFailed"));
   },
   onFolderListed(payload) {
     const data=parsePayload(payload); folderItems=data.items||[];
