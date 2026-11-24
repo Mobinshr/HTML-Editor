@@ -138,10 +138,26 @@ class MainActivity : AppCompatActivity() {
             }
         }
         @JavascriptInterface fun createEntry(name: String, directory: Boolean, pathJson: String) {
-            val parent = folderAt(pathJson) ?: return
-            val safeName = name.trim().takeIf { it.isNotEmpty() && !it.contains("/") && !it.contains("\\") } ?: return
-            val created = if (directory) parent.createDirectory(safeName) else parent.createFile(mimeFor(safeName), safeName)
-            listFolder(pathJson, JSONObject().put("message", if (created != null) "created" else "create_failed"))
+            val result = try {
+                val parent = folderAt(pathJson) ?: throw IllegalStateException("folderRequired")
+                val safeName = name.trim().takeIf {
+                    it.isNotEmpty() && !it.contains("/") && !it.contains("\\")
+                } ?: throw IllegalArgumentException("invalidName")
+                val created = if (directory) parent.createDirectory(safeName)
+                    else parent.createFile(mimeFor(safeName), safeName)
+                if (created == null) throw IllegalStateException("createFailed")
+                JSONObject().put("ok", true).put("name", created.name ?: safeName)
+            } catch (e: IllegalArgumentException) {
+                JSONObject().put("ok", false).put("error", "invalidName")
+            } catch (e: Exception) {
+                val key = when (e.message) {
+                    "folderRequired" -> "folderRequired"
+                    else -> "createFailed"
+                }
+                JSONObject().put("ok", false).put("error", key)
+            }
+            runOnUiThread { callJs("onEntryCreated", result) }
+            if (result.optBoolean("ok")) listFolder(pathJson)
         }
         @JavascriptInterface fun renameEntry(uriText: String, name: String, pathJson: String) {
             val file = DocumentFile.fromSingleUri(this@MainActivity, Uri.parse(uriText))
