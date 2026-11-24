@@ -61,10 +61,12 @@ jobs:
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Restore stable debug signing key
+      - name: Restore and verify stable debug signing key
         env:
           ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
         run: |
+          set -euo pipefail
+          EXPECTED_SHA1="85EFC050123C89D9DA54763C70E6359DE107EAB2"
           if [ -z "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
             echo "::error::Repository secret ANDROID_DEBUG_KEYSTORE_BASE64 is not configured."
             exit 1
@@ -72,10 +74,32 @@ jobs:
           mkdir -p "$HOME/.android"
           printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
           chmod 600 "$HOME/.android/debug.keystore"
-          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey >/dev/null
+          ACTUAL_SHA1="$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey 2>/dev/null | awk -F': ' '/SHA1:/ { gsub(":", "", $2); print toupper($2); exit }')"
+          if [ "$ACTUAL_SHA1" != "$EXPECTED_SHA1" ]; then
+            echo "::error::Signing key mismatch. Update ANDROID_DEBUG_KEYSTORE_BASE64 with the supplied html-editor-debug-keystore-base64.txt file."
+            echo "Expected certificate SHA-1: $EXPECTED_SHA1"
+            echo "Found certificate SHA-1: ${ACTUAL_SHA1:-missing}"
+            exit 1
+          fi
+          echo "Stable signing certificate verified: $ACTUAL_SHA1"
 
       - name: Build debug APK
         run: gradle :app:assembleDebug
+
+      - name: Verify APK signing certificate
+        run: |
+          set -euo pipefail
+          EXPECTED_SHA1="85EFC050123C89D9DA54763C70E6359DE107EAB2"
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" | tee /tmp/apk-certificate.txt
+          ACTUAL_SHA1="$(awk -F': ' '/certificate SHA-1 digest:/ { gsub(":", "", $2); print toupper($2); exit }' /tmp/apk-certificate.txt)"
+          if [ "$ACTUAL_SHA1" != "$EXPECTED_SHA1" ]; then
+            echo "::error::The generated APK is not signed with the stable HTML Editor key."
+            echo "Expected certificate SHA-1: $EXPECTED_SHA1"
+            echo "Found certificate SHA-1: ${ACTUAL_SHA1:-missing}"
+            exit 1
+          fi
+          echo "APK signature verified: $ACTUAL_SHA1"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -121,4 +145,3 @@ jobs:
             --repo "$REPOSITORY" \
             --title "HTML Editor $VERSION_NAME (Latest)" \
             --notes "Latest automatic build of HTML Editor.\n\nApp version: $VERSION_NAME\nCommit: $GITHUB_SHA"
-
