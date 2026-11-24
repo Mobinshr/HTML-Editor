@@ -58,7 +58,7 @@ const editor = new EditorView({
     EditorView.updateListener.of(update => {
       if (update.docChanged) {
         const tab = activeTab();
-        if (tab) { tab.text = update.state.doc.toString(); tab.dirty = true; renderTabs(); updateHeader(); schedulePreview(); }
+        if (tab) { tab.text = update.state.doc.toString(); tab.dirty = true; updateTabIndicators(tab); updateHeader(); schedulePreview(); }
       }
       if (update.selectionSet || update.docChanged) updateCursorStatus(update.view);
     }),
@@ -93,6 +93,7 @@ function renderTabs() {
     item.className = "tab" + (tab.id === activeId ? " active" : "");
     const label = document.createElement("button");
     label.className = "tab-label";
+    label.dataset.tabLabel = String(tab.id);
     label.textContent = (tab.dirty ? "● " : "") + tab.name;
     label.onclick = () => switchTab(tab.id);
     const close = document.createElement("button");
@@ -103,6 +104,12 @@ function renderTabs() {
     item.append(label, close); host.append(item);
   });
   renderOpenFiles();
+}
+function updateTabIndicators(tab) {
+  const tabLabel = document.querySelector(`[data-tab-label="${tab.id}"]`);
+  if (tabLabel) tabLabel.textContent = (tab.dirty ? "● " : "") + tab.name;
+  const openFileLabel = document.querySelector(`[data-open-file-id="${tab.id}"]`);
+  if (openFileLabel) openFileLabel.textContent = (tab.dirty ? "● " : "▤ ") + tab.name;
 }
 function switchTab(id) {
   const tab = tabs.find(item => item.id === id); if (!tab) return;
@@ -115,7 +122,7 @@ function switchTab(id) {
     EditorView.updateListener.of(update => {
       if (update.docChanged) {
         const current = activeTab();
-        if (current) { current.text = update.state.doc.toString(); current.dirty = true; renderTabs(); updateHeader(); schedulePreview(); }
+        if (current) { current.text = update.state.doc.toString(); current.dirty = true; updateTabIndicators(current); updateHeader(); schedulePreview(); }
       }
       if (update.selectionSet || update.docChanged) updateCursorStatus(update.view);
     }),
@@ -171,6 +178,7 @@ function renderOpenFiles() {
   tabs.forEach(tab => {
     const row = document.createElement("div"); row.className = "file-row";
     const open = document.createElement("button"); open.className = "file-open";
+    open.dataset.openFileId = String(tab.id);
     open.textContent = (tab.dirty ? "● " : "▤ ") + tab.name; open.onclick = () => { switchTab(tab.id); closeDrawer(); };
     const close = document.createElement("button"); close.className = "mini-action"; close.textContent = "×"; close.onclick = () => closeTab(tab.id);
     row.append(open,close); host.append(row);
