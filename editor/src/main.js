@@ -58,7 +58,7 @@ const editor = new EditorView({
     EditorView.updateListener.of(update => {
       if (update.docChanged) {
         const tab = activeTab();
-        if (tab) { tab.text = update.state.doc.toString(); tab.dirty = true; updateTabIndicators(tab); updateHeader(); schedulePreview(); }
+        if (tab) { tab.dirty = true; updateTabIndicators(tab); updateHeader(); schedulePreview(); }
       }
       if (update.selectionSet || update.docChanged) updateCursorStatus(update.view);
     }),
@@ -72,6 +72,9 @@ const editor = new EditorView({
   ] })
 });
 
+function getTabText(tab) {
+  return tab.id === activeId ? editor.state.doc.toString() : (tab.text || "");
+}
 function updateCursorStatus(view) {
   const pos = view.state.selection.main.head;
   const line = view.state.doc.lineAt(pos);
@@ -122,7 +125,7 @@ function switchTab(id) {
     EditorView.updateListener.of(update => {
       if (update.docChanged) {
         const current = activeTab();
-        if (current) { current.text = update.state.doc.toString(); current.dirty = true; updateTabIndicators(current); updateHeader(); schedulePreview(); }
+        if (current) { current.dirty = true; updateTabIndicators(current); updateHeader(); schedulePreview(); }
       }
       if (update.selectionSet || update.docChanged) updateCursorStatus(update.view);
     }),
@@ -218,7 +221,7 @@ function renderPreview() {
     previewFrame.srcdoc = `<!doctype html><html><body style="font-family:system-ui;padding:24px;color:#777;text-align:center">${message}</body></html>`;
     return;
   }
-  let source = tab.text || "<!doctype html><html><body></body></html>";
+  let source = getTabText(tab) || "<!doctype html><html><body></body></html>";
   if (Array.isArray(tab.projectPath) && tab.projectPath.length) {
     const basePath = tab.projectPath.slice(0, -1).map(part => encodeURIComponent(part)).join("/");
     const baseTag = `<base href="https://appassets.androidplatform.net/project/${basePath ? basePath + "/" : ""}">`;

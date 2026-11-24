@@ -1,6 +1,6 @@
 # HTML Editor
 
-**Latest app version:** 0.1.8 (versionCode 9)
+**Latest app version:** 0.1.9 (versionCode 10)
 
 <p align="center">
   <img src="assets/images/icon.png" alt="HTML Editor app icon" width="180" />
