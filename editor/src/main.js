@@ -197,7 +197,9 @@ let previewTimer = null;
 const previewFrame = document.getElementById("preview-frame");
 const previewShell = document.getElementById("preview-shell");
 const editorShell = document.getElementById("editor-shell");
+const previewButton = document.getElementById("preview-button");
 const previewButtonLabel = document.getElementById("preview-button-label");
+const previewIcon = document.getElementById("preview-icon");
 
 function renderPreview() {
   const tab = activeTab();
@@ -230,7 +232,11 @@ function setPreviewMode(visible) {
   previewVisible = visible;
   editorShell.hidden = visible;
   previewShell.hidden = !visible;
-  previewButtonLabel.textContent = visible ? t("editor") : t("preview");
+  const label = visible ? t("editor") : t("preview");
+  previewButtonLabel.textContent = label;
+  previewButton.setAttribute("aria-label", label);
+  previewButton.title = label;
+  previewIcon.textContent = visible ? "✎" : "▶";
   if (visible) renderPreview();
 }
 
@@ -241,13 +247,31 @@ function applyTheme() {
 darkQuery.addEventListener?.("change",applyTheme);
 applyTheme(); updateHeader(); updateCursorStatus(editor); renderTabs();
 
-document.getElementById("preview-button").onclick=()=>setPreviewMode(!previewVisible);
-document.getElementById("files-button").onclick=openDrawer;
+const menuToggle = document.getElementById("menu-toggle");
+const overflowMenu = document.getElementById("overflow-menu");
+function closeOverflowMenu() {
+  overflowMenu.hidden = true;
+  menuToggle.setAttribute("aria-expanded", "false");
+}
+menuToggle.onclick = () => {
+  const open = overflowMenu.hidden;
+  overflowMenu.hidden = !open;
+  menuToggle.setAttribute("aria-expanded", String(open));
+};
+document.addEventListener("click", event => {
+  if (!(event.target instanceof Element) || !event.target.closest(".menu-anchor")) closeOverflowMenu();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") closeOverflowMenu();
+});
+
+previewButton.onclick=()=>{closeOverflowMenu();setPreviewMode(!previewVisible);};
+document.getElementById("files-button").onclick=()=>{closeOverflowMenu();openDrawer();};
 document.getElementById("close-drawer").onclick=closeDrawer;
 document.getElementById("drawer-scrim").onclick=closeDrawer;
-document.getElementById("open-button").onclick=()=>NativeBridge.openFile();
-document.getElementById("save-button").onclick=()=>saveActive(false);
-document.getElementById("saveas-button").onclick=()=>saveActive(true);
+document.getElementById("open-button").onclick=()=>{closeOverflowMenu();NativeBridge.openFile();};
+document.getElementById("save-button").onclick=()=>{closeOverflowMenu();saveActive(false);};
+document.getElementById("saveas-button").onclick=()=>{closeOverflowMenu();saveActive(true);};
 document.getElementById("choose-folder").onclick=()=>{currentFolderPath=[];NativeBridge.chooseFolder();};
 document.getElementById("folder-up").onclick=()=>{if(currentFolderPath.length){currentFolderPath.pop();NativeBridge.listFolder(JSON.stringify(currentFolderPath));}};
 document.getElementById("new-file").onclick=()=>{const name=window.prompt(t("filePrompt"),"new-file.html");if(name)NativeBridge.createEntry(name,false,JSON.stringify(currentFolderPath));};
