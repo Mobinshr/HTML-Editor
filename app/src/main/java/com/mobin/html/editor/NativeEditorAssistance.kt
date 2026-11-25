@@ -1,7 +1,7 @@
 package com.mobin.html.editor
 
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.TextRange
+import androidx.compose.ui.text.TextRange
 
 /**
  * Small editing helpers for the native Compose editor.
