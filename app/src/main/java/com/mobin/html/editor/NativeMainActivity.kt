@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -281,10 +282,10 @@ private fun NativeEditorScreen(
                 }
             }
 
-            Box(Modifier.fillMaxWidth().size(height = 1.dp).background(Color(0xFF223149)))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF223149)))
 
             if (preview) {
-                Column(Modifier.fillMaxSize().background(AppBackground)) {
+                Column(Modifier.weight(1f).fillMaxWidth().background(AppBackground)) {
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -330,7 +331,8 @@ private fun NativeEditorScreen(
             } else {
                 Row(
                     Modifier
-                        .fillMaxSize()
+                        .weight(1f)
+                        .fillMaxWidth()
                         .background(AppBackground)
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.Top
