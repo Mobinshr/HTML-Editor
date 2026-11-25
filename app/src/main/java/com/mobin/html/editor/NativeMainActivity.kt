@@ -3,36 +3,43 @@ package com.mobin.html.editor
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.webkit.WebView
 import android.webkit.WebSettings
+import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -49,6 +57,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -56,6 +65,14 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private val AppBackground = Color(0xFF0B1422)
+private val AppSurface = Color(0xFF121E2E)
+private val EditorSurface = Color(0xFF0E1928)
+private val GutterSurface = Color(0xFF152337)
+private val PrimaryAccent = Color(0xFF8BC7FF)
+private val MainText = Color(0xFFE5EDF7)
+private val MutedText = Color(0xFF8FA5BE)
 
 class NativeMainActivity : ComponentActivity() {
     private var editorText by mutableStateOf("")
@@ -76,9 +93,10 @@ class NativeMainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(
-                primary = Color(0xFF8BC7FF),
-                background = Color(0xFF0B1220),
-                surface = Color(0xFF151F30)
+                primary = PrimaryAccent,
+                background = AppBackground,
+                surface = AppSurface,
+                surfaceVariant = GutterSurface
             )) {
                 NativeEditorScreen(
                     text = editorText,
@@ -188,11 +206,10 @@ private fun NativeEditorScreen(
 ) {
     val syntaxHighlighter = remember(fileName) { NativeCodeHighlighter(fileName) }
     var fieldValue by remember { mutableStateOf(TextFieldValue(text)) }
+    var menuExpanded by remember { mutableStateOf(false) }
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
 
-    // External document loads update the field without resetting the caret
-    // on each ordinary keystroke.
     LaunchedEffect(text) {
         if (text != fieldValue.text) {
             val caret = fieldValue.selection.start.coerceIn(0, text.length)
@@ -200,82 +217,141 @@ private fun NativeEditorScreen(
         }
     }
 
-    Surface(Modifier.fillMaxSize(), color = Color(0xFF0B1220)) {
+    val lineCount = maxOf(1, fieldValue.text.count { it == '\n' } + 1)
+    val cursor = fieldValue.selection.start.coerceIn(0, fieldValue.text.length)
+    val textBeforeCursor = fieldValue.text.substring(0, cursor)
+    val cursorLine = textBeforeCursor.count { it == '\n' } + 1
+    val cursorColumn = cursor - textBeforeCursor.lastIndexOf('\n')
+    val lineNumberWidth = lineCount.toString().length
+    val lineNumbers = (1..lineCount).joinToString("\n") { it.toString().padStart(lineNumberWidth, ' ') }
+
+    Surface(Modifier.fillMaxSize(), color = AppBackground) {
         Column(Modifier.fillMaxSize()) {
+            // Compact header: file identity is separated from the action controls.
             Row(
-                Modifier.fillMaxWidth().background(Color(0xFF141F31)).padding(horizontal = 10.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                Modifier
+                    .fillMaxWidth()
+                    .background(AppSurface)
+                    .padding(start = 12.dp, end = 6.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f).padding(end = 6.dp)) {
                     Text(
-                        fileName + if (dirty) " •" else "",
-                        color = Color.White,
+                        fileName,
+                        color = MainText,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        languageName(fileName) + " • " + message,
-                        color = Color(0xFF8FA5BE),
-                        fontSize = 11.sp,
-                        maxLines = 1
+                        languageName(fileName) + "  ·  HTML Editor",
+                        color = MutedText,
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = onOpen) { Icon(Icons.Default.FolderOpen, "بازکردن", tint = Color.White) }
-                IconButton(onClick = onSave) { Icon(Icons.Default.Save, "ذخیره", tint = Color.White) }
-                IconButton(onClick = onPreview) { Icon(Icons.Default.PlayArrow, "پیش‌نمایش", tint = Color(0xFF8BC7FF)) }
-                IconButton(onClick = onLegacy) { Icon(Icons.Default.MoreHoriz, "ویرایشگر کلاسیک", tint = Color.White) }
+                IconButton(onClick = onOpen, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.FolderOpen, contentDescription = "باز کردن فایل", tint = MainText)
+                }
+                IconButton(onClick = onSave, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.Save, contentDescription = "ذخیره فایل", tint = MainText)
+                }
+                IconButton(onClick = onPreview, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = "پیش‌نمایش", tint = PrimaryAccent)
+                }
+                Box {
+                    IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(44.dp)) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "گزینه‌های بیشتر", tint = MainText)
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("ذخیره با نام") },
+                            onClick = { menuExpanded = false; onSaveAs() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("ویرایشگر کلاسیک") },
+                            onClick = { menuExpanded = false; onLegacy() }
+                        )
+                    }
+                }
             }
 
+            Box(Modifier.fillMaxWidth().size(height = 1.dp).background(Color(0xFF223149)))
+
             if (preview) {
-                Row(
-                    Modifier.fillMaxWidth().background(Color(0xFF1A2A40)).padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("پیش‌نمایش HTML", color = Color.White, modifier = Modifier.weight(1f))
-                    OutlinedButton(onClick = onPreview) { Text("بازگشت به کد") }
-                }
-                AndroidView(
-                    modifier = Modifier.fillMaxSize().background(Color.White),
-                    factory = { context ->
-                        WebView(context).apply {
-                            settings.javaScriptEnabled = true
-                            settings.domStorageEnabled = true
-                            settings.allowFileAccess = false
-                            settings.allowContentAccess = false
-                            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-                        }
-                    },
-                    update = { web ->
-                        val version = text.hashCode()
-                        if (web.tag != version) {
-                            web.tag = version
-                            web.loadDataWithBaseURL(
-                                "https://preview.html-editor.local/",
-                                text,
-                                "text/html",
-                                "UTF-8",
-                                null
-                            )
-                        }
+                Column(Modifier.fillMaxSize().background(AppBackground)) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(AppSurface)
+                            .padding(start = 14.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "پیش‌نمایش صفحه",
+                            color = MainText,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = onPreview) { Text("بازگشت به کد") }
                     }
-                )
+                    AndroidView(
+                        modifier = Modifier.weight(1f).fillMaxWidth().background(Color.White),
+                        factory = { context ->
+                            WebView(context).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.allowFileAccess = false
+                                settings.allowContentAccess = false
+                                settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                            }
+                        },
+                        update = { web ->
+                            val version = text.hashCode()
+                            if (web.tag != version) {
+                                web.tag = version
+                                web.loadDataWithBaseURL(
+                                    "https://preview.html-editor.local/",
+                                    text,
+                                    "text/html",
+                                    "UTF-8",
+                                    null
+                                )
+                            }
+                        }
+                    )
+                }
             } else {
                 Row(
-                    Modifier.fillMaxSize().padding(8.dp),
+                    Modifier
+                        .fillMaxSize()
+                        .background(AppBackground)
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    Text(
-                        text = (1..maxOf(1, text.count { it == '\n' } + 1)).joinToString("\n"),
-                        modifier = Modifier
-                            .background(Color(0xFF111B2A), RoundedCornerShape(8.dp))
+                    Box(
+                        Modifier
+                            .fillMaxHeight()
+                            .widthIn(min = 36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(GutterSurface)
                             .verticalScroll(verticalScrollState)
-                            .padding(horizontal = 8.dp, vertical = 10.dp),
-                        color = Color(0xFF61758D),
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
-                        lineHeight = 19.sp
-                    )
+                            .padding(horizontal = 8.dp, vertical = 12.dp)
+                    ) {
+                        Text(
+                            lineNumbers,
+                            color = Color(0xFF8196B0),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp,
+                            lineHeight = 21.sp
+                        )
+                    }
                     Spacer(Modifier.width(8.dp))
                     BasicTextField(
                         value = fieldValue,
@@ -285,22 +361,26 @@ private fun NativeEditorScreen(
                             if (assisted.text != text) onTextChange(assisted.text)
                         },
                         modifier = Modifier
-                            .fillMaxSize()
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(EditorSurface)
+                            .horizontalScroll(horizontalScrollState)
                             .verticalScroll(verticalScrollState)
-                            .horizontalScroll(horizontalScrollState),
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
                         textStyle = TextStyle(
-                            color = Color(0xFFE4EDF7),
+                            color = MainText,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
-                            lineHeight = 19.sp
+                            lineHeight = 21.sp
                         ),
                         visualTransformation = syntaxHighlighter,
-                        cursorBrush = SolidColor(Color(0xFF8BC7FF)),
+                        cursorBrush = SolidColor(PrimaryAccent),
                         decorationBox = { inner ->
                             if (fieldValue.text.isEmpty()) {
                                 Text(
                                     "کد خود را اینجا بنویسید…",
-                                    color = Color(0xFF61758D),
+                                    color = Color(0xFF71869F),
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 13.sp
                                 )
@@ -309,6 +389,44 @@ private fun NativeEditorScreen(
                         }
                     )
                 }
+            }
+
+            // Keep editor feedback and cursor position in one quiet status strip.
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .background(AppSurface)
+                    .padding(horizontal = 13.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    languageName(fileName),
+                    color = PrimaryAccent,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "Ln $cursorLine, Col $cursorColumn",
+                    color = MutedText,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(Modifier.weight(1f))
+                Box(
+                    Modifier
+                        .size(6.dp)
+                        .background(if (dirty) Color(0xFFE7B65C) else Color(0xFF61C995), CircleShape)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (dirty) "ذخیره‌نشده" else message,
+                    color = if (dirty) Color(0xFFE7B65C) else MutedText,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 116.dp)
+                )
             }
         }
     }
