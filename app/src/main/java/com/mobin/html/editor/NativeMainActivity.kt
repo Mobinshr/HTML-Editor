@@ -42,6 +42,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -176,6 +177,7 @@ private fun NativeEditorScreen(
     onPreview: () -> Unit,
     onLegacy: () -> Unit
 ) {
+    val syntaxHighlighter = remember(fileName) { NativeCodeHighlighter(fileName) }
     Surface(Modifier.fillMaxSize(), color = Color(0xFF0B1220)) {
         Column(Modifier.fillMaxSize()) {
             Row(
@@ -185,7 +187,7 @@ private fun NativeEditorScreen(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(fileName + if (dirty) " •" else "", color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                    Text(message, color = Color(0xFF8FA5BE), fontSize = 11.sp, maxLines = 1)
+                    Text(languageName(fileName) + " • " + message, color = Color(0xFF8FA5BE), fontSize = 11.sp, maxLines = 1)
                 }
                 IconButton(onClick = onOpen) { Icon(Icons.Default.FolderOpen, "بازکردن", tint = Color.White) }
                 IconButton(onClick = onSave) { Icon(Icons.Default.Save, "ذخیره", tint = Color.White) }
@@ -237,6 +239,7 @@ private fun NativeEditorScreen(
                             fontSize = 13.sp,
                             lineHeight = 19.sp
                         ),
+                        visualTransformation = syntaxHighlighter,
                         cursorBrush = SolidColor(Color(0xFF8BC7FF)),
                         decorationBox = { inner -> 
                             if (text.isEmpty()) Text("کد خود را اینجا بنویسید…", color = Color(0xFF61758D), fontFamily = FontFamily.Monospace, fontSize = 13.sp)

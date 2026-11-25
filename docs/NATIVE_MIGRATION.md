@@ -1,13 +1,20 @@
 # Native migration
 
-This branch starts the Kotlin + Jetpack Compose migration without replacing the stable release.
+The migration moves the primary editor experience to Kotlin + Jetpack Compose while retaining the previous CodeMirror implementation as a fallback until feature parity is reached.
 
 ## Native milestone 1
-- The launcher, toolbar, editor surface, document opening and saving are native Android UI.
-- HTML preview remains an isolated Android WebView surface because it must execute browser HTML/CSS/JavaScript.
-- The previous CodeMirror screen remains available as a fallback while native editing grows toward feature parity.
+- Native launcher, toolbar, document open/save flows, editor surface, and HTML preview container.
+- HTML preview remains an isolated Android WebView because it must execute browser HTML/CSS/JavaScript.
+- Existing CodeMirror screen remains available from the native editor overflow menu.
+
+## Native milestone 2
+- Added native syntax colouring for HTML, CSS, JavaScript, JSON, XML, SVG, and Markdown.
+- Highlighting is applied through Compose VisualTransformation, so the primary editor does not load CodeMirror or editor JavaScript.
+- Files larger than 120,000 characters fall back to plain text to avoid making typing sluggish.
 
 ## Follow-up work
-- Add language-aware syntax highlighting, autocomplete, multi-tab editing and full SAF folder management.
+- Add native autocomplete and bracket/quote assistance.
+- Add native multi-tab editing and file switching.
+- Migrate SAF project-folder browsing and file operations.
 - Keep the same application ID and stable debug certificate so preview builds can be installed as updates.
-- The preview workflow uploads an APK artifact only; it does not modify the existing `latest` release.
+- Continue using WebView only where browser rendering is required for HTML preview.
