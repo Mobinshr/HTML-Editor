@@ -6,8 +6,9 @@
         <item name="colorSecondary">@color/editor_primary</item>
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <item name="android:navigationBarColor">?android:colorBackground</item>
+        <item name="android:statusBarColor">@color/editor_surface_dark</item>
+        <item name="android:navigationBarColor">@color/editor_surface_dark</item>
+        <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
 </resources>
