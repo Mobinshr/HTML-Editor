@@ -1,9 +1,9 @@
 # HTML Editor
 
-**Latest app version:** 0.1.9 (versionCode 10)
+**Latest app version:** 0.1.10 (versionCode 11)
 
 <p align="center">
-  <img src="assets/images/icon.png" alt="HTML Editor app icon" width="180" />
+  <img src="assets/images/icon.webp" alt="HTML Editor app icon" width="180" />
 </p>
 
 A lightweight Android code editor for working with local web and text files. It combines a CodeMirror 6 editing surface with Android file access and an in-app HTML preview.
@@ -38,7 +38,7 @@ HTML, CSS, JavaScript, JSON, XML, and Markdown.
 - Open files through Android's system picker and save edited content.
 - HTML preview inside the app.
 - Persian and English interface text.
-- Custom orange-and-white launcher icon.
+- Custom launcher artwork with the orange HTML5 badge, code window, and pencil.
 
 ## Preview notes
 
