@@ -16,22 +16,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +47,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TextRange
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -66,7 +64,7 @@ class NativeMainActivity : ComponentActivity() {
     private var dirty by mutableStateOf(false)
     private var preview by mutableStateOf(false)
     private var message by mutableStateOf("آماده")
-    
+
     private val openFile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) readDocument(uri)
     }
@@ -112,7 +110,12 @@ class NativeMainActivity : ComponentActivity() {
                 dirty = false
                 preview = false
                 message = "فایل باز شد"
-                try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) } catch (_: Exception) {}
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                } catch (_: Exception) { }
             } catch (e: Exception) {
                 message = e.message ?: "خطا در باز کردن فایل"
             }
@@ -128,8 +131,9 @@ class NativeMainActivity : ComponentActivity() {
         lifecycleScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    contentResolver.openOutputStream(target, "wt")?.bufferedWriter(Charsets.UTF_8)?.use { it.write(editorText) }
-                        ?: throw IllegalStateException("فایل برای نوشتن در دسترس نیست")
+                    contentResolver.openOutputStream(target, "wt")?.bufferedWriter(Charsets.UTF_8)?.use {
+                        it.write(editorText)
+                    } ?: throw IllegalStateException("فایل برای نوشتن در دسترس نیست")
                 }
                 dirty = false
                 message = "ذخیره شد"
@@ -143,8 +147,9 @@ class NativeMainActivity : ComponentActivity() {
         lifecycleScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    contentResolver.openOutputStream(uri, "wt")?.bufferedWriter(Charsets.UTF_8)?.use { it.write(editorText) }
-                        ?: throw IllegalStateException("فایل برای نوشتن در دسترس نیست")
+                    contentResolver.openOutputStream(uri, "wt")?.bufferedWriter(Charsets.UTF_8)?.use {
+                        it.write(editorText)
+                    } ?: throw IllegalStateException("فایل برای نوشتن در دسترس نیست")
                 }
                 fileUri = uri
                 fileName = queryName(uri) ?: fileName
@@ -157,9 +162,13 @@ class NativeMainActivity : ComponentActivity() {
     }
 
     private fun queryName(uri: Uri): String? {
-        return contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
-            if (it.moveToFirst()) it.getString(0) else null
-        }
+        return contentResolver.query(
+            uri,
+            arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { if (it.moveToFirst()) it.getString(0) else null }
     }
 }
 
@@ -178,6 +187,19 @@ private fun NativeEditorScreen(
     onLegacy: () -> Unit
 ) {
     val syntaxHighlighter = remember(fileName) { NativeCodeHighlighter(fileName) }
+    var fieldValue by remember { mutableStateOf(TextFieldValue(text)) }
+    val verticalScrollState = rememberScrollState()
+    val horizontalScrollState = rememberScrollState()
+
+    // External document loads update the field without resetting the caret
+    // on each ordinary keystroke.
+    LaunchedEffect(text) {
+        if (text != fieldValue.text) {
+            val caret = fieldValue.selection.start.coerceIn(0, text.length)
+            fieldValue = TextFieldValue(text, selection = TextRange(caret))
+        }
+    }
+
     Surface(Modifier.fillMaxSize(), color = Color(0xFF0B1220)) {
         Column(Modifier.fillMaxSize()) {
             Row(
@@ -186,16 +208,30 @@ private fun NativeEditorScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(fileName + if (dirty) " •" else "", color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                    Text(languageName(fileName) + " • " + message, color = Color(0xFF8FA5BE), fontSize = 11.sp, maxLines = 1)
+                    Text(
+                        fileName + if (dirty) " •" else "",
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1
+                    )
+                    Text(
+                        languageName(fileName) + " • " + message,
+                        color = Color(0xFF8FA5BE),
+                        fontSize = 11.sp,
+                        maxLines = 1
+                    )
                 }
                 IconButton(onClick = onOpen) { Icon(Icons.Default.FolderOpen, "بازکردن", tint = Color.White) }
                 IconButton(onClick = onSave) { Icon(Icons.Default.Save, "ذخیره", tint = Color.White) }
                 IconButton(onClick = onPreview) { Icon(Icons.Default.PlayArrow, "پیش‌نمایش", tint = Color(0xFF8BC7FF)) }
                 IconButton(onClick = onLegacy) { Icon(Icons.Default.MoreHoriz, "ویرایشگر کلاسیک", tint = Color.White) }
             }
+
             if (preview) {
-                Row(Modifier.fillMaxWidth().background(Color(0xFF1A2A40)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth().background(Color(0xFF1A2A40)).padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("پیش‌نمایش HTML", color = Color.White, modifier = Modifier.weight(1f))
                     OutlinedButton(onClick = onPreview) { Text("بازگشت به کد") }
                 }
@@ -214,25 +250,44 @@ private fun NativeEditorScreen(
                         val version = text.hashCode()
                         if (web.tag != version) {
                             web.tag = version
-                            web.loadDataWithBaseURL("https://preview.html-editor.local/", text, "text/html", "UTF-8", null)
+                            web.loadDataWithBaseURL(
+                                "https://preview.html-editor.local/",
+                                text,
+                                "text/html",
+                                "UTF-8",
+                                null
+                            )
                         }
                     }
                 )
             } else {
-                Row(Modifier.fillMaxSize().padding(8.dp)) {
+                Row(
+                    Modifier.fillMaxSize().padding(8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
                     Text(
                         text = (1..maxOf(1, text.count { it == '\n' } + 1)).joinToString("\n"),
-                        modifier = Modifier.background(Color(0xFF111B2A), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 10.dp),
+                        modifier = Modifier
+                            .background(Color(0xFF111B2A), RoundedCornerShape(8.dp))
+                            .verticalScroll(verticalScrollState)
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
                         color = Color(0xFF61758D),
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
                         lineHeight = 19.sp
                     )
-                    Spacer(Modifier.height(1.dp))
+                    Spacer(Modifier.width(8.dp))
                     BasicTextField(
-                        value = text,
-                        onValueChange = onTextChange,
-                        modifier = Modifier.fillMaxSize().padding(start = 8.dp).verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState()),
+                        value = fieldValue,
+                        onValueChange = { proposed ->
+                            val assisted = assistEditorInput(fieldValue, proposed)
+                            fieldValue = assisted
+                            if (assisted.text != text) onTextChange(assisted.text)
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(verticalScrollState)
+                            .horizontalScroll(horizontalScrollState),
                         textStyle = TextStyle(
                             color = Color(0xFFE4EDF7),
                             fontFamily = FontFamily.Monospace,
@@ -241,8 +296,15 @@ private fun NativeEditorScreen(
                         ),
                         visualTransformation = syntaxHighlighter,
                         cursorBrush = SolidColor(Color(0xFF8BC7FF)),
-                        decorationBox = { inner -> 
-                            if (text.isEmpty()) Text("کد خود را اینجا بنویسید…", color = Color(0xFF61758D), fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                        decorationBox = { inner ->
+                            if (fieldValue.text.isEmpty()) {
+                                Text(
+                                    "کد خود را اینجا بنویسید…",
+                                    color = Color(0xFF61758D),
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 13.sp
+                                )
+                            }
                             inner()
                         }
                     )

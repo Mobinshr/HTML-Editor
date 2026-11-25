@@ -12,9 +12,14 @@ The migration moves the primary editor experience to Kotlin + Jetpack Compose wh
 - Highlighting is applied through Compose VisualTransformation, so the primary editor does not load CodeMirror or editor JavaScript.
 - Files larger than 120,000 characters fall back to plain text to avoid making typing sluggish.
 
+## Native milestone 3
+- Automatic closing pairs for brackets, braces, parentheses, single/double quotes, and backticks.
+- Smart indentation after Enter, with an inner line and aligned closing line for common bracket blocks.
+- Shared vertical scroll state keeps the line-number gutter aligned with the code area.
+- Input assistance only handles single-character insertions; paste and replacement operations remain unchanged.
+
 ## Follow-up work
-- Add native autocomplete and bracket/quote assistance.
-- Add native multi-tab editing and file switching.
+- Add native autocomplete and multi-tab editing.
 - Migrate SAF project-folder browsing and file operations.
 - Keep the same application ID and stable debug certificate so preview builds can be installed as updates.
 - Continue using WebView only where browser rendering is required for HTML preview.

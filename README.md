@@ -1,6 +1,6 @@
 # HTML Editor
 
-**Latest app version:** 1.4.0 (versionCode 14)
+**Latest app version:** 1.5.0 (versionCode 15)
 
 <p align="center">
   <img src="assets/images/icon.webp" alt="HTML Editor app icon" width="180" />
@@ -20,15 +20,18 @@ A lightweight Android code editor for local web and text files. The launcher exp
 
 - Kotlin + AndroidX host application
 - Jetpack Compose native launcher, toolbar, document actions, and primary editing surface
-- Native Compose syntax colouring for HTML, CSS, JavaScript, JSON, XML, and Markdown
+- Native Compose syntax colouring for HTML, CSS, JavaScript, JSON, XML, SVG, and Markdown
 - Android Storage Access Framework for opening and saving user-selected files
 - Android WebView used for HTML preview and the optional legacy CodeMirror screen
 - Legacy CodeMirror assets bundled locally with Vite; no remote editor scripts are required
 
 ## Native editor features
 
-- Native code input with monospace typography and line-number gutter.
+- Native code input with monospace typography and a line-number gutter.
+- Line-number gutter and code area share vertical scrolling.
 - Syntax colouring based on the current file extension.
+- Automatic closing pairs for brackets, braces, parentheses, quotes, and backticks.
+- Smart indentation after Enter, including a blank inner line before a matching closing bracket.
 - Open and save documents through Android's system file picker.
 - In-app HTML preview.
 - Current file name, language, and unsaved-change status.
@@ -70,4 +73,4 @@ GitHub Actions builds the debug APK when relevant app, editor, Gradle, or workfl
 
 ## Project status
 
-The native editing surface now includes language-aware syntax colouring. Native autocomplete, multi-tab editing, and full native project-folder management remain future milestones. The classic CodeMirror editor is preserved as a fallback while those capabilities are migrated.
+The native editor now includes syntax colouring, bracket/quote pairing, smart indentation, and synchronized line-number scrolling. Native autocomplete, native multi-tab editing, and full native project-folder management remain future milestones. The classic CodeMirror editor is preserved as a fallback while those capabilities are migrated.
