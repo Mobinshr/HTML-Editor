@@ -25,6 +25,9 @@ internal fun languageName(fileName: String): String = when (fileName.substringAf
 internal class NativeCodeHighlighter(fileName: String) : VisualTransformation {
     private val extension = fileName.substringAfterLast('.', "").lowercase()
 
+    private var cachedInput: AnnotatedString? = null
+    private var cachedResult: TransformedText? = null
+
     private val tokenPattern: Regex? = when (extension) {
         "html", "htm", "xml", "svg" -> Regex(
             """<!--[\s\S]*?-->|<!DOCTYPE\b[^>]*>|</?\s*[A-Za-z][A-Za-z0-9:_-]*|[A-Za-z_:][A-Za-z0-9:._-]*(?=\s*=)|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'""",
@@ -46,21 +49,31 @@ internal class NativeCodeHighlighter(fileName: String) : VisualTransformation {
     }
 
     override fun filter(text: AnnotatedString): TransformedText {
-        val source = text.text
-        val pattern = tokenPattern
-        if (pattern == null || source.isEmpty() || source.length > MAX_HIGHLIGHT_LENGTH) {
-            return TransformedText(text, OffsetMapping.Identity)
+        // Compose may ask for the same transformation more than once during layout.
+        // Reuse the previous result instead of running the regex scanner again.
+        if (cachedInput == text) {
+            return cachedResult ?: TransformedText(text, OffsetMapping.Identity)
         }
 
-        val highlighted = buildAnnotatedString {
-            append(source)
-            pattern.findAll(source).forEach { match ->
-                val token = match.value
-                val color = tokenColor(token, source, match.range.last + 1) ?: return@forEach
-                addStyle(SpanStyle(color = color), match.range.first, match.range.last + 1)
+        val source = text.text
+        val pattern = tokenPattern
+        val result = if (pattern == null || source.isEmpty() || source.length > MAX_HIGHLIGHT_LENGTH) {
+            TransformedText(text, OffsetMapping.Identity)
+        } else {
+            val highlighted = buildAnnotatedString {
+                append(source)
+                pattern.findAll(source).forEach { match ->
+                    val token = match.value
+                    val color = tokenColor(token, source, match.range.last + 1) ?: return@forEach
+                    addStyle(SpanStyle(color = color), match.range.first, match.range.last + 1)
+                }
             }
+            TransformedText(highlighted, OffsetMapping.Identity)
         }
-        return TransformedText(highlighted, OffsetMapping.Identity)
+
+        cachedInput = text
+        cachedResult = result
+        return result
     }
 
     private fun tokenColor(token: String, source: String, endExclusive: Int): Color? {
