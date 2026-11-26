@@ -61,4 +61,4 @@ GitHub Actions builds the debug APK when relevant app, editor, Gradle, or workfl
 
 ## Project status
 
-The native editor now includes syntax colouring, bracket/quote pairing, smart indentation, and synchronized line-number scrolling. Native autocomplete, native multi-tab editing, and full native project-folder management remain future milestones. Unit tests cover editor pairing and save MIME mapping; real-device interaction tests are still required. The classic CodeMirror editor has been removed; the Compose editor is the only code-editing interface.
+The native editor now includes syntax colouring, bracket/quote pairing, smart indentation, and synchronized line-number scrolling. Native autocomplete, native multi-tab editing, and full native project-folder management remain future milestones. Unit tests cover editor pairing and save MIME mapping; real-device interaction tests are still required. The Compose editor is the only code-editing interface.
