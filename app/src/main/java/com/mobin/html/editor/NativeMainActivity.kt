@@ -1,11 +1,13 @@
 package com.mobin.html.editor
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -42,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,66 +57,200 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.isSystemInDarkTheme
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val AppBackground = Color(0xFF0B1422)
-private val AppSurface = Color(0xFF121E2E)
-private val EditorSurface = Color(0xFF0E1928)
-private val GutterSurface = Color(0xFF152337)
-private val PrimaryAccent = Color(0xFF8BC7FF)
-private val MainText = Color(0xFFE5EDF7)
-private val MutedText = Color(0xFF8FA5BE)
+private data class EditorPalette(
+    val appBackground: Color,
+    val appSurface: Color,
+    val editorSurface: Color,
+    val gutterSurface: Color,
+    val primaryAccent: Color,
+    val mainText: Color,
+    val mutedText: Color,
+    val lineNumberText: Color,
+    val divider: Color,
+    val placeholder: Color,
+    val unsaved: Color,
+    val saved: Color
+)
+
+private val DarkPalette = EditorPalette(
+    appBackground = Color(0xFF0B1422),
+    appSurface = Color(0xFF121E2E),
+    editorSurface = Color(0xFF0E1928),
+    gutterSurface = Color(0xFF152337),
+    primaryAccent = Color(0xFF8BC7FF),
+    mainText = Color(0xFFE5EDF7),
+    mutedText = Color(0xFF8FA5BE),
+    lineNumberText = Color(0xFF8196B0),
+    divider = Color(0xFF223149),
+    placeholder = Color(0xFF71869F),
+    unsaved = Color(0xFFE7B65C),
+    saved = Color(0xFF61C995)
+)
+
+private val LightPalette = EditorPalette(
+    appBackground = Color(0xFFF3F6FA),
+    appSurface = Color(0xFFFFFFFF),
+    editorSurface = Color(0xFFFAFCFF),
+    gutterSurface = Color(0xFFE8EEF5),
+    primaryAccent = Color(0xFF1769AA),
+    mainText = Color(0xFF1A2635),
+    mutedText = Color(0xFF65758A),
+    lineNumberText = Color(0xFF718096),
+    divider = Color(0xFFD8E1EB),
+    placeholder = Color(0xFF8795A8),
+    unsaved = Color(0xFFAD6B13),
+    saved = Color(0xFF26875D)
+)
 
 class NativeMainActivity : ComponentActivity() {
+    private enum class PendingAction { OPEN, LEGACY, EXIT }
+
     private var editorText by mutableStateOf("")
     private var fileName by mutableStateOf("Untitled.html")
     private var fileUri by mutableStateOf<Uri?>(null)
     private var dirty by mutableStateOf(false)
     private var preview by mutableStateOf(false)
     private var message by mutableStateOf("آماده")
+    private var showUnsavedDialog by mutableStateOf(false)
+    private var saveInProgress by mutableStateOf(false)
+    private var editRevision = 0L
+    private var pendingAction: PendingAction? = null
+    private var pendingSaveContent: String? = null
+    private var pendingSaveRevision = 0L
+    private var pendingSaveContinuation: (() -> Unit)? = null
 
     private val openFile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) readDocument(uri)
     }
-    private val saveAs = registerForActivityResult(ActivityResultContracts.CreateDocument("text/html")) { uri ->
-        if (uri != null) writeDocument(uri)
+
+    private val saveAsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val uri = result.data?.data
+        val snapshot = pendingSaveContent
+        val revision = pendingSaveRevision
+        val continuation = pendingSaveContinuation
+        pendingSaveContent = null
+        pendingSaveContinuation = null
+
+        if (result.resultCode == Activity.RESULT_OK && uri != null) {
+            writeDocument(uri, snapshot ?: editorText, revision, continuation)
+        } else {
+            message = "ذخیره لغو شد"
+            if (continuation != null) showUnsavedDialog = true
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme(
-                primary = PrimaryAccent,
-                background = AppBackground,
-                surface = AppSurface,
-                surfaceVariant = GutterSurface
-            )) {
+            val darkMode = isSystemInDarkTheme()
+            val palette = if (darkMode) DarkPalette else LightPalette
+
+            window.statusBarColor = palette.appBackground.toArgb()
+            window.navigationBarColor = palette.appBackground.toArgb()
+            WindowInsetsControllerCompat(window, window.decorView).apply {
+                isAppearanceLightStatusBars = !darkMode
+                isAppearanceLightNavigationBars = !darkMode
+            }
+
+            val scheme = if (darkMode) {
+                darkColorScheme(
+                    primary = palette.primaryAccent,
+                    background = palette.appBackground,
+                    surface = palette.appSurface,
+                    surfaceVariant = palette.gutterSurface
+                )
+            } else {
+                lightColorScheme(
+                    primary = palette.primaryAccent,
+                    background = palette.appBackground,
+                    surface = palette.appSurface,
+                    surfaceVariant = palette.gutterSurface
+                )
+            }
+
+            MaterialTheme(colorScheme = scheme) {
                 NativeEditorScreen(
                     text = editorText,
                     fileName = fileName,
                     dirty = dirty,
                     preview = preview,
                     message = message,
-                    onTextChange = { editorText = it; dirty = true; message = "تغییرات ذخیره‌نشده" },
-                    onOpen = { openFile.launch(arrayOf("*/*")) },
+                    palette = palette,
+                    showUnsavedDialog = showUnsavedDialog,
+                    onTextChange = {
+                        editorText = it
+                        editRevision += 1
+                        dirty = true
+                        message = "تغییرات ذخیره‌نشده"
+                    },
+                    onOpen = { requestPendingAction(PendingAction.OPEN) },
                     onSave = { saveCurrent() },
-                    onSaveAs = { saveAs.launch(fileName.ifBlank { "Untitled.html" }) },
+                    onSaveAs = { launchSaveAs() },
                     onPreview = { preview = !preview },
-                    onLegacy = { startActivity(Intent(this, MainActivity::class.java)) }
+                    onLegacy = { requestPendingAction(PendingAction.LEGACY) },
+                    onRequestBack = { requestPendingAction(PendingAction.EXIT) },
+                    onSaveAndContinue = { saveAndContinue() },
+                    onDiscardAndContinue = { pendingAction?.let { runPendingAction(it) } },
+                    onCancelPending = { cancelPendingAction() }
                 )
             }
+        }
+    }
+
+    private fun requestPendingAction(action: PendingAction) {
+        if (saveInProgress) {
+            message = "ذخیره در حال انجام است"
+            return
+        }
+        if (dirty) {
+            pendingAction = action
+            showUnsavedDialog = true
+        } else {
+            runPendingAction(action)
+        }
+    }
+
+    private fun runPendingAction(action: PendingAction) {
+        pendingAction = null
+        showUnsavedDialog = false
+        when (action) {
+            PendingAction.OPEN -> openFile.launch(arrayOf("*/*"))
+            PendingAction.LEGACY -> startActivity(Intent(this, MainActivity::class.java))
+            PendingAction.EXIT -> finish()
+        }
+    }
+
+    private fun cancelPendingAction() {
+        pendingAction = null
+        showUnsavedDialog = false
+    }
+
+    private fun saveAndContinue() {
+        if (saveInProgress) {
+            message = "ذخیره در حال انجام است"
+            return
+        }
+        val action = pendingAction ?: return
+        showUnsavedDialog = false
+        saveCurrent {
+            if (pendingAction == action) runPendingAction(action)
         }
     }
 
@@ -126,6 +264,7 @@ class NativeMainActivity : ComponentActivity() {
                 fileUri = uri
                 fileName = queryName(uri) ?: "Untitled.html"
                 editorText = content
+                editRevision += 1
                 dirty = false
                 preview = false
                 message = "فایل باز شد"
@@ -141,41 +280,79 @@ class NativeMainActivity : ComponentActivity() {
         }
     }
 
-    private fun saveCurrent() {
-        val target = fileUri
-        if (target == null) {
-            saveAs.launch(fileName.ifBlank { "Untitled.html" })
+    private fun saveCurrent(afterSave: (() -> Unit)? = null) {
+        if (saveInProgress) {
+            message = "ذخیره در حال انجام است"
             return
         }
-        lifecycleScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    contentResolver.openOutputStream(target, "wt")?.bufferedWriter(Charsets.UTF_8)?.use {
-                        it.write(editorText)
-                    } ?: throw IllegalStateException("فایل برای نوشتن در دسترس نیست")
-                }
-                dirty = false
-                message = "ذخیره شد"
-            } catch (e: Exception) {
-                message = e.message ?: "خطا در ذخیرهٔ فایل"
-            }
+        val target = fileUri
+        if (target == null) {
+            launchSaveAs(afterSave)
+            return
         }
+        writeDocument(target, editorText, editRevision, afterSave)
     }
 
-    private fun writeDocument(uri: Uri) {
+    private fun launchSaveAs(afterSave: (() -> Unit)? = null) {
+        if (saveInProgress) {
+            message = "ذخیره در حال انجام است"
+            return
+        }
+        val suggestedName = fileName.ifBlank { "Untitled.html" }
+        pendingSaveContent = editorText
+        pendingSaveRevision = editRevision
+        pendingSaveContinuation = afterSave
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = mimeTypeForFileName(suggestedName)
+            putExtra(Intent.EXTRA_TITLE, suggestedName)
+        }
+        saveAsLauncher.launch(intent)
+    }
+
+    private fun writeDocument(
+        uri: Uri,
+        contentSnapshot: String,
+        revisionSnapshot: Long,
+        afterSave: (() -> Unit)?
+    ) {
+        if (saveInProgress) {
+            message = "ذخیره در حال انجام است"
+            if (afterSave != null) showUnsavedDialog = true
+            return
+        }
+        saveInProgress = true
         lifecycleScope.launch {
+            var savedSuccessfully = false
             try {
                 withContext(Dispatchers.IO) {
                     contentResolver.openOutputStream(uri, "wt")?.bufferedWriter(Charsets.UTF_8)?.use {
-                        it.write(editorText)
+                        it.write(contentSnapshot)
                     } ?: throw IllegalStateException("فایل برای نوشتن در دسترس نیست")
                 }
                 fileUri = uri
                 fileName = queryName(uri) ?: fileName
-                dirty = false
-                message = "ذخیره شد"
+                val changedDuringSave = editRevision != revisionSnapshot
+                dirty = changedDuringSave
+                message = if (changedDuringSave) {
+                    "نسخه ذخیره شد؛ تغییرات جدید ذخیره‌نشده‌اند"
+                } else {
+                    "ذخیره شد"
+                }
+                savedSuccessfully = true
             } catch (e: Exception) {
                 message = e.message ?: "خطا در ذخیرهٔ فایل"
+                if (afterSave != null) showUnsavedDialog = true
+            } finally {
+                saveInProgress = false
+            }
+
+            if (savedSuccessfully && afterSave != null) {
+                if (editRevision == revisionSnapshot) {
+                    afterSave()
+                } else {
+                    showUnsavedDialog = true
+                }
             }
         }
     }
@@ -198,13 +375,21 @@ private fun NativeEditorScreen(
     dirty: Boolean,
     preview: Boolean,
     message: String,
+    palette: EditorPalette,
+    showUnsavedDialog: Boolean,
     onTextChange: (String) -> Unit,
     onOpen: () -> Unit,
     onSave: () -> Unit,
     onSaveAs: () -> Unit,
     onPreview: () -> Unit,
-    onLegacy: () -> Unit
+    onLegacy: () -> Unit,
+    onRequestBack: () -> Unit,
+    onSaveAndContinue: () -> Unit,
+    onDiscardAndContinue: () -> Unit,
+    onCancelPending: () -> Unit
 ) {
+    BackHandler { onRequestBack() }
+
     val syntaxHighlighter = remember(fileName) { NativeCodeHighlighter(fileName) }
     var fieldValue by remember { mutableStateOf(TextFieldValue(text)) }
     var menuExpanded by remember { mutableStateOf(false) }
@@ -226,20 +411,20 @@ private fun NativeEditorScreen(
     val lineNumberWidth = lineCount.toString().length
     val lineNumbers = (1..lineCount).joinToString("\n") { it.toString().padStart(lineNumberWidth, ' ') }
 
-    Surface(Modifier.fillMaxSize(), color = AppBackground) {
+    Surface(Modifier.fillMaxSize(), color = palette.appBackground) {
         Column(Modifier.fillMaxSize()) {
             // Compact header: file identity is separated from the action controls.
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .background(AppSurface)
+                    .background(palette.appSurface)
                     .padding(start = 12.dp, end = 6.dp, top = 5.dp, bottom = 5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f).padding(end = 6.dp)) {
                     Text(
                         fileName,
-                        color = MainText,
+                        color = palette.mainText,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         maxLines = 1,
@@ -247,24 +432,24 @@ private fun NativeEditorScreen(
                     )
                     Text(
                         languageName(fileName) + "  ·  HTML Editor",
-                        color = MutedText,
+                        color = palette.mutedText,
                         fontSize = 10.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
                 IconButton(onClick = onOpen, modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.Default.FolderOpen, contentDescription = "باز کردن فایل", tint = MainText)
+                    Icon(Icons.Default.FolderOpen, contentDescription = "باز کردن فایل", tint = palette.mainText)
                 }
                 IconButton(onClick = onSave, modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.Default.Save, contentDescription = "ذخیره فایل", tint = MainText)
+                    Icon(Icons.Default.Save, contentDescription = "ذخیره فایل", tint = palette.mainText)
                 }
                 IconButton(onClick = onPreview, modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = "پیش‌نمایش", tint = PrimaryAccent)
+                    Icon(Icons.Default.PlayArrow, contentDescription = "پیش‌نمایش", tint = palette.primaryAccent)
                 }
                 Box {
                     IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(44.dp)) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "گزینه‌های بیشتر", tint = MainText)
+                        Icon(Icons.Default.MoreVert, contentDescription = "گزینه‌های بیشتر", tint = palette.mainText)
                     }
                     DropdownMenu(
                         expanded = menuExpanded,
@@ -282,20 +467,20 @@ private fun NativeEditorScreen(
                 }
             }
 
-            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF223149)))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(palette.divider))
 
             if (preview) {
-                Column(Modifier.weight(1f).fillMaxWidth().background(AppBackground)) {
+                Column(Modifier.weight(1f).fillMaxWidth().background(palette.appBackground)) {
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .background(AppSurface)
+                            .background(palette.appSurface)
                             .padding(start = 14.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             "پیش‌نمایش صفحه",
-                            color = MainText,
+                            color = palette.mainText,
                             fontWeight = FontWeight.Medium,
                             fontSize = 13.sp,
                             modifier = Modifier.weight(1f)
@@ -333,7 +518,7 @@ private fun NativeEditorScreen(
                     Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .background(AppBackground)
+                        .background(palette.appBackground)
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.Top
                 ) {
@@ -342,13 +527,13 @@ private fun NativeEditorScreen(
                             .fillMaxHeight()
                             .widthIn(min = 36.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(GutterSurface)
+                            .background(palette.gutterSurface)
                             .verticalScroll(verticalScrollState)
                             .padding(horizontal = 8.dp, vertical = 12.dp)
                     ) {
                         Text(
                             lineNumbers,
-                            color = Color(0xFF8196B0),
+                            color = palette.lineNumberText,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 12.sp,
                             lineHeight = 21.sp
@@ -366,23 +551,23 @@ private fun NativeEditorScreen(
                             .weight(1f)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(EditorSurface)
+                            .background(palette.editorSurface)
                             .horizontalScroll(horizontalScrollState)
                             .verticalScroll(verticalScrollState)
                             .padding(horizontal = 12.dp, vertical = 12.dp),
                         textStyle = TextStyle(
-                            color = MainText,
+                            color = palette.mainText,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
                             lineHeight = 21.sp
                         ),
                         visualTransformation = syntaxHighlighter,
-                        cursorBrush = SolidColor(PrimaryAccent),
+                        cursorBrush = SolidColor(palette.primaryAccent),
                         decorationBox = { inner ->
                             if (fieldValue.text.isEmpty()) {
                                 Text(
                                     "کد خود را اینجا بنویسید…",
-                                    color = Color(0xFF71869F),
+                                    color = palette.placeholder,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 13.sp
                                 )
@@ -397,20 +582,20 @@ private fun NativeEditorScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .background(AppSurface)
+                    .background(palette.appSurface)
                     .padding(horizontal = 13.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     languageName(fileName),
-                    color = PrimaryAccent,
+                    color = palette.primaryAccent,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
                     "Ln $cursorLine, Col $cursorColumn",
-                    color = MutedText,
+                    color = palette.mutedText,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
                 )
@@ -418,18 +603,40 @@ private fun NativeEditorScreen(
                 Box(
                     Modifier
                         .size(6.dp)
-                        .background(if (dirty) Color(0xFFE7B65C) else Color(0xFF61C995), CircleShape)
+                        .background(if (dirty) palette.unsaved else palette.saved, CircleShape)
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
                     if (dirty) "ذخیره‌نشده" else message,
-                    color = if (dirty) Color(0xFFE7B65C) else MutedText,
+                    color = if (dirty) palette.unsaved else palette.mutedText,
                     fontSize = 10.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.widthIn(max = 116.dp)
                 )
             }
+        }
+        if (showUnsavedDialog) {
+            AlertDialog(
+                onDismissRequest = onCancelPending,
+                title = { Text("تغییرات ذخیره نشده‌اند") },
+                text = { Text("پیش از ادامه، تغییرات فعلی را ذخیره می‌کنید؟") },
+                confirmButton = {
+                    TextButton(onClick = onSaveAndContinue) {
+                        Text("ذخیره و ادامه")
+                    }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = onDiscardAndContinue) {
+                            Text("ادامه بدون ذخیره")
+                        }
+                        TextButton(onClick = onCancelPending) {
+                            Text("انصراف")
+                        }
+                    }
+                }
+            )
         }
     }
 }
