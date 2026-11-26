@@ -122,7 +122,10 @@ private val LightPalette = EditorPalette(
 class NativeMainActivity : ComponentActivity() {
     private enum class PendingAction { OPEN, EXIT }
 
-    private var editorText by mutableStateOf("")
+    // Keep the live buffer outside Compose state. The text field owns its local value,
+    // so typing should not recompose the entire Activity tree.
+    private var editorText = ""
+    private var documentRevision by mutableStateOf(0L)
     private var fileName by mutableStateOf("Untitled.html")
     private var fileUri by mutableStateOf<Uri?>(null)
     private var dirty by mutableStateOf(false)
@@ -188,6 +191,7 @@ class NativeMainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = scheme) {
                 NativeEditorScreen(
                     text = editorText,
+                    documentRevision = documentRevision,
                     fileName = fileName,
                     dirty = dirty,
                     preview = preview,
@@ -262,6 +266,7 @@ class NativeMainActivity : ComponentActivity() {
                 fileUri = uri
                 fileName = queryName(uri) ?: "Untitled.html"
                 editorText = content
+                documentRevision += 1
                 editRevision += 1
                 dirty = false
                 preview = false
@@ -369,6 +374,7 @@ class NativeMainActivity : ComponentActivity() {
 @Composable
 private fun NativeEditorScreen(
     text: String,
+    documentRevision: Long,
     fileName: String,
     dirty: Boolean,
     preview: Boolean,
@@ -393,7 +399,7 @@ private fun NativeEditorScreen(
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
 
-    LaunchedEffect(text) {
+    LaunchedEffect(documentRevision) {
         if (text != fieldValue.text) {
             val caret = fieldValue.selection.start.coerceIn(0, text.length)
             fieldValue = TextFieldValue(text, selection = TextRange(caret))
@@ -406,7 +412,9 @@ private fun NativeEditorScreen(
     val cursorLine = textBeforeCursor.count { it == '\n' } + 1
     val cursorColumn = cursor - textBeforeCursor.lastIndexOf('\n')
     val lineNumberWidth = lineCount.toString().length
-    val lineNumbers = (1..lineCount).joinToString("\n") { it.toString().padStart(lineNumberWidth, ' ') }
+    val lineNumbers = remember(lineCount, lineNumberWidth) {
+        (1..lineCount).joinToString("\n") { it.toString().padStart(lineNumberWidth, ' ') }
+    }
 
     Surface(Modifier.fillMaxSize(), color = palette.appBackground) {
         Column(Modifier.fillMaxSize()) {
@@ -492,9 +500,8 @@ private fun NativeEditorScreen(
                             }
                         },
                         update = { web ->
-                            val version = text.hashCode()
-                            if (web.tag != version) {
-                                web.tag = version
+                            if (web.tag != text) {
+                                web.tag = text
                                 web.loadDataWithBaseURL(
                                     "https://preview.html-editor.local/",
                                     text,
@@ -536,9 +543,10 @@ private fun NativeEditorScreen(
                     BasicTextField(
                         value = fieldValue,
                         onValueChange = { proposed ->
+                            val previousText = fieldValue.text
                             val assisted = assistEditorInput(fieldValue, proposed, fileName)
                             fieldValue = assisted
-                            if (assisted.text != text) onTextChange(assisted.text)
+                            if (assisted.text != previousText) onTextChange(assisted.text)
                         },
                         modifier = Modifier
                             .weight(1f)
