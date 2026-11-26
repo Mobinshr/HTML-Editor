@@ -1,6 +1,6 @@
 # HTML Editor
 
-**Latest app version:** 1.8.0 (versionCode 18)
+**Latest app version:** 1.9.0 (versionCode 19)
 
 <p align="center">
   <img src="assets/images/icon.webp" alt="HTML Editor app icon" width="180" />
@@ -39,6 +39,9 @@ A lightweight Android code editor for local web and text files. The launcher exp
 - In-app HTML preview.
 - Current file name, language, and unsaved-change status.
 - Large files fall back to plain text highlighting to keep editing responsive.
+- Live text updates are kept local to the editor to avoid re-composing the Activity for every keystroke.
+- Repeated syntax-highlighting requests reuse the previous transformation result.
+- Caret position and total line count are calculated in one pass; line-number text is reused until the line count changes.
 
 ## Supported native highlighting
 
