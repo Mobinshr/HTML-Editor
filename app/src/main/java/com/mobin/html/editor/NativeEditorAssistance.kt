@@ -9,7 +9,9 @@ import androidx.compose.ui.text.TextRange
  * Only a single-character insertion with a collapsed selection is assisted.
  * Paste operations, replacements, and selected-range edits stay untouched.
  */
-internal fun assistEditorInput(previous: TextFieldValue, proposed: TextFieldValue): TextFieldValue {
+internal fun assistEditorInput(previous: TextFieldValue, proposed: TextFieldValue, fileName: String = ""): TextFieldValue {
+    val extension = fileName.substringAfterLast('.', "").lowercase()
+    val supportsAngleBrackets = extension in setOf("html", "htm", "xml", "svg")
     val oldText = previous.text
     val newText = proposed.text
 
@@ -28,7 +30,7 @@ internal fun assistEditorInput(previous: TextFieldValue, proposed: TextFieldValu
             typedAtCaret != null &&
             newText == expectedText &&
             proposed.selection.start == oldCaret + 1 &&
-            (typedAtCaret in listOf(')', ']', '}', '"', '\'') || typedAtCaret == 96.toChar()) &&
+            (typedAtCaret in listOf(')', ']', '}', '"', '\'') || typedAtCaret == 96.toChar() || (supportsAngleBrackets && typedAtCaret == '>')) &&
             oldText.getOrNull(oldCaret) == typedAtCaret
         ) {
             return TextFieldValue(oldText, selection = TextRange(oldCaret + 1))
@@ -62,7 +64,7 @@ internal fun assistEditorInput(previous: TextFieldValue, proposed: TextFieldValu
         '"' to '"',
         '\'' to '\'',
         96.toChar() to 96.toChar()
-    )
+    ) + if (supportsAngleBrackets) mapOf('<' to '>') else emptyMap()
 
     if (typed in closingFor.keys) {
         val closing = closingFor.getValue(typed)
