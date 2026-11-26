@@ -1,6 +1,6 @@
 # HTML Editor
 
-**Latest app version:** 1.5.0 (versionCode 15)
+**Latest app version:** 1.7.0 (versionCode 17)
 
 <p align="center">
   <img src="assets/images/icon.webp" alt="HTML Editor app icon" width="180" />
@@ -32,7 +32,11 @@ A lightweight Android code editor for local web and text files. The launcher exp
 - Syntax colouring based on the current file extension.
 - Automatic closing pairs for brackets, braces, parentheses, quotes, and backticks.
 - Smart indentation after Enter, including a blank inner line before a matching closing bracket.
-- Open and save documents through Android's system file picker.
+- Open and save documents through Android's system file picker, using a MIME type that matches the filename.
+- Warn before opening another file, switching to the classic editor, or leaving with unsaved changes.
+- Save a stable text snapshot and keep the document marked dirty if typing continues during a save.
+- Skip existing closing brackets and quotes rather than inserting duplicates.
+- Follow the Android system light or dark theme.
 - In-app HTML preview.
 - Current file name, language, and unsaved-change status.
 - Large files fall back to plain text highlighting to keep editing responsive.
@@ -73,4 +77,4 @@ GitHub Actions builds the debug APK when relevant app, editor, Gradle, or workfl
 
 ## Project status
 
-The native editor now includes syntax colouring, bracket/quote pairing, smart indentation, and synchronized line-number scrolling. Native autocomplete, native multi-tab editing, and full native project-folder management remain future milestones. The classic CodeMirror editor is preserved as a fallback while those capabilities are migrated.
+The native editor now includes syntax colouring, bracket/quote pairing, smart indentation, and synchronized line-number scrolling. Native autocomplete, native multi-tab editing, and full native project-folder management remain future milestones. Unit tests cover editor pairing and save MIME mapping; real-device interaction tests are still required. The classic CodeMirror editor is preserved as a fallback while those capabilities are migrated.
