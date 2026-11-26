@@ -120,7 +120,7 @@ private val LightPalette = EditorPalette(
 )
 
 class NativeMainActivity : ComponentActivity() {
-    private enum class PendingAction { OPEN, LEGACY, EXIT }
+    private enum class PendingAction { OPEN, EXIT }
 
     private var editorText by mutableStateOf("")
     private var fileName by mutableStateOf("Untitled.html")
@@ -204,7 +204,6 @@ class NativeMainActivity : ComponentActivity() {
                     onSave = { saveCurrent() },
                     onSaveAs = { launchSaveAs() },
                     onPreview = { preview = !preview },
-                    onLegacy = { requestPendingAction(PendingAction.LEGACY) },
                     onRequestBack = { requestPendingAction(PendingAction.EXIT) },
                     onSaveAndContinue = { saveAndContinue() },
                     onDiscardAndContinue = { pendingAction?.let { runPendingAction(it) } },
@@ -232,7 +231,6 @@ class NativeMainActivity : ComponentActivity() {
         showUnsavedDialog = false
         when (action) {
             PendingAction.OPEN -> openFile.launch(arrayOf("*/*"))
-            PendingAction.LEGACY -> startActivity(Intent(this, MainActivity::class.java))
             PendingAction.EXIT -> finish()
         }
     }
@@ -382,7 +380,6 @@ private fun NativeEditorScreen(
     onSave: () -> Unit,
     onSaveAs: () -> Unit,
     onPreview: () -> Unit,
-    onLegacy: () -> Unit,
     onRequestBack: () -> Unit,
     onSaveAndContinue: () -> Unit,
     onDiscardAndContinue: () -> Unit,
@@ -458,10 +455,6 @@ private fun NativeEditorScreen(
                         DropdownMenuItem(
                             text = { Text("ذخیره با نام") },
                             onClick = { menuExpanded = false; onSaveAs() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("ویرایشگر کلاسیک") },
-                            onClick = { menuExpanded = false; onLegacy() }
                         )
                     }
                 }
