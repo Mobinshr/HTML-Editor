@@ -1,6 +1,6 @@
 # Native editor
 
-The application uses one native Kotlin + Jetpack Compose editor. The former CodeMirror screen and its bundled web assets have been removed.
+The application uses one native Kotlin + Jetpack Compose code editor.
 
 ## Current architecture
 - Native Compose toolbar, document open/save flows, editor surface, line-number gutter, and status strip.
