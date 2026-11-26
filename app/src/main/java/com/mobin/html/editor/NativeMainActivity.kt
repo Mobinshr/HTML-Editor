@@ -543,7 +543,7 @@ private fun NativeEditorScreen(
                     BasicTextField(
                         value = fieldValue,
                         onValueChange = { proposed ->
-                            val assisted = assistEditorInput(fieldValue, proposed)
+                            val assisted = assistEditorInput(fieldValue, proposed, fileName)
                             fieldValue = assisted
                             if (assisted.text != text) onTextChange(assisted.text)
                         },
