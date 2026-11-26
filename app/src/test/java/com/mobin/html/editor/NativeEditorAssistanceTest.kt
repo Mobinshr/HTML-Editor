@@ -40,6 +40,35 @@ class NativeEditorAssistanceTest {
     }
 
     @Test
+    fun htmlAngleBracketPairProducesCompleteTag() {
+        val empty = TextFieldValue("")
+        val typedLessThan = TextFieldValue("<", selection = TextRange(1))
+
+        val afterOpen = assistEditorInput(empty, typedLessThan, "index.html")
+
+        assertEquals("<>", afterOpen.text)
+        assertEquals(1, afterOpen.selection.start)
+
+        val beforeClosing = TextFieldValue("<Html>", selection = TextRange(5))
+        val typedClosing = TextFieldValue("<Html>>", selection = TextRange(6))
+        val afterClose = assistEditorInput(beforeClosing, typedClosing, "index.html")
+
+        assertEquals("<Html>", afterClose.text)
+        assertEquals(6, afterClose.selection.start)
+    }
+
+    @Test
+    fun angleBracketsAreNotAutoPairedInJavaScript() {
+        val result = assistEditorInput(
+            TextFieldValue(""),
+            TextFieldValue("<", selection = TextRange(1)),
+            "app.js"
+        )
+
+        assertEquals("<", result.text)
+    }
+
+    @Test
     fun mimeTypeFollowsFileExtension() {
         assertEquals("text/html", mimeTypeForFileName("page.html"))
         assertEquals("text/css", mimeTypeForFileName("styles.css"))
