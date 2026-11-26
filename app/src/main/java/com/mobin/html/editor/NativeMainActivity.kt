@@ -406,11 +406,13 @@ private fun NativeEditorScreen(
         }
     }
 
-    val lineCount = maxOf(1, fieldValue.text.count { it == '\n' } + 1)
     val cursor = fieldValue.selection.start.coerceIn(0, fieldValue.text.length)
-    val textBeforeCursor = fieldValue.text.substring(0, cursor)
-    val cursorLine = textBeforeCursor.count { it == '\n' } + 1
-    val cursorColumn = cursor - textBeforeCursor.lastIndexOf('\n')
+    val cursorMetrics = remember(fieldValue.text, cursor) {
+        calculateEditorCursorMetrics(fieldValue.text, cursor)
+    }
+    val lineCount = cursorMetrics.lineCount
+    val cursorLine = cursorMetrics.cursorLine
+    val cursorColumn = cursorMetrics.cursorColumn
     val lineNumberWidth = lineCount.toString().length
     val lineNumbers = remember(lineCount, lineNumberWidth) {
         (1..lineCount).joinToString("\n") { it.toString().padStart(lineNumberWidth, ' ') }
