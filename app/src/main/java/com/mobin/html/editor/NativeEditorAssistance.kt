@@ -10,10 +10,33 @@ import androidx.compose.ui.text.TextRange
  * Paste operations, replacements, and selected-range edits stay untouched.
  */
 internal fun assistEditorInput(previous: TextFieldValue, proposed: TextFieldValue): TextFieldValue {
-    if (!proposed.selection.collapsed) return proposed
-
     val oldText = previous.text
     val newText = proposed.text
+
+    // Skip over a closing character that is already immediately under the caret.
+    if (
+        previous.selection.collapsed &&
+        proposed.selection.collapsed &&
+        newText.length == oldText.length + 1
+    ) {
+        val oldCaret = previous.selection.start.coerceIn(0, oldText.length)
+        val typedAtCaret = newText.getOrNull(oldCaret)
+        val expectedText = typedAtCaret?.let {
+            oldText.substring(0, oldCaret) + it + oldText.substring(oldCaret)
+        }
+        if (
+            typedAtCaret != null &&
+            newText == expectedText &&
+            proposed.selection.start == oldCaret + 1 &&
+            (typedAtCaret in listOf(')', ']', '}', '"', '\'') || typedAtCaret == 96.toChar()) &&
+            oldText.getOrNull(oldCaret) == typedAtCaret
+        ) {
+            return TextFieldValue(oldText, selection = TextRange(oldCaret + 1))
+        }
+    }
+
+    if (!proposed.selection.collapsed) return proposed
+
     var prefix = 0
     while (prefix < oldText.length && prefix < newText.length && oldText[prefix] == newText[prefix]) {
         prefix++
@@ -32,7 +55,14 @@ internal fun assistEditorInput(previous: TextFieldValue, proposed: TextFieldValu
     if (removed.isNotEmpty() || inserted.length != 1 || caret != prefix + 1) return proposed
 
     val typed = inserted[0]
-    val closingFor = mapOf('(' to ')', '[' to ']', '{' to '}', '"' to '"', '\'' to '\'', '`' to '`')
+    val closingFor = mapOf(
+        '(' to ')',
+        '[' to ']',
+        '{' to '}',
+        '"' to '"',
+        '\'' to '\'',
+        96.toChar() to 96.toChar()
+    )
 
     if (typed in closingFor.keys) {
         val closing = closingFor.getValue(typed)
@@ -58,4 +88,19 @@ internal fun assistEditorInput(previous: TextFieldValue, proposed: TextFieldValu
     }
 
     return proposed
+}
+
+/** Returns a useful MIME type for the selected filename extension. */
+internal fun mimeTypeForFileName(fileName: String): String {
+    return when (fileName.substringAfterLast('.', "").lowercase()) {
+        "html", "htm" -> "text/html"
+        "css" -> "text/css"
+        "js", "mjs", "cjs" -> "application/javascript"
+        "json" -> "application/json"
+        "xml" -> "text/xml"
+        "svg" -> "image/svg+xml"
+        "md", "markdown" -> "text/markdown"
+        "txt" -> "text/plain"
+        else -> "text/plain"
+    }
 }
