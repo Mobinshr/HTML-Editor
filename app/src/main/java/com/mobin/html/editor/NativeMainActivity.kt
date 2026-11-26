@@ -407,9 +407,7 @@ private fun NativeEditorScreen(
     }
 
     val cursor = fieldValue.selection.start.coerceIn(0, fieldValue.text.length)
-    val cursorMetrics = remember(fieldValue.text, cursor) {
-        calculateEditorCursorMetrics(fieldValue.text, cursor)
-    }
+    val cursorMetrics = calculateEditorCursorMetrics(fieldValue.text, cursor)
     val lineCount = cursorMetrics.lineCount
     val cursorLine = cursorMetrics.cursorLine
     val cursorColumn = cursorMetrics.cursorColumn
