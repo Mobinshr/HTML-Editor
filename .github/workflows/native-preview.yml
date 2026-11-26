@@ -61,7 +61,7 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" | tee /tmp/native-editor-cert.txt
           ACTUAL_SHA1="$(awk -F': ' '/certificate SHA-1 digest:/ { gsub(":", "", $2); print toupper($2); exit }' /tmp/native-editor-cert.txt)"
           test "$ACTUAL_SHA1" = "85EFC050123C89D9DA54763C70E6359DE107EAB2"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.mobin.html.editor' versionCode='13' versionName='1.3.0'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.mobin.html.editor' versionCode='17' versionName='1.7.0'"
       - uses: actions/upload-artifact@v4
         with:
           name: HTML-Editor-Native-Preview
