@@ -51,7 +51,7 @@ internal class NativeCodeHighlighter(fileName: String) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         // Compose may ask for the same transformation more than once during layout.
         // Reuse the previous result instead of running the regex scanner again.
-        if (cachedInput == text) {
+        if (cachedInput === text) {
             return cachedResult ?: TransformedText(text, OffsetMapping.Identity)
         }
 
