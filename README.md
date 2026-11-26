@@ -6,7 +6,7 @@
   <img src="assets/images/icon.webp" alt="HTML Editor app icon" width="180" />
 </p>
 
-A lightweight Android code editor for local web and text files. The launcher experience and primary editing surface use Kotlin and Jetpack Compose. An isolated WebView is retained for HTML preview and the optional legacy CodeMirror editor.
+A lightweight Android code editor for local web and text files. The launcher experience and primary editing surface use Kotlin and Jetpack Compose. Android WebView is used only for HTML preview; the app has one native Compose editor.
 
 ## Identity
 
@@ -22,8 +22,7 @@ A lightweight Android code editor for local web and text files. The launcher exp
 - Jetpack Compose native launcher, toolbar, document actions, and primary editing surface
 - Native Compose syntax colouring for HTML, CSS, JavaScript, JSON, XML, SVG, and Markdown
 - Android Storage Access Framework for opening and saving user-selected files
-- Android WebView used for HTML preview and the optional legacy CodeMirror screen
-- Legacy CodeMirror assets bundled locally with Vite; no remote editor scripts are required
+- Android WebView used only for HTML preview
 
 ## Native editor features
 
@@ -33,24 +32,13 @@ A lightweight Android code editor for local web and text files. The launcher exp
 - Automatic closing pairs for brackets, braces, parentheses, quotes, and backticks.
 - Smart indentation after Enter, including a blank inner line before a matching closing bracket.
 - Open and save documents through Android's system file picker, using a MIME type that matches the filename.
-- Warn before opening another file, switching to the classic editor, or leaving with unsaved changes.
+- Warn before opening another file or leaving with unsaved changes.
 - Save a stable text snapshot and keep the document marked dirty if typing continues during a save.
 - Skip existing closing brackets and quotes rather than inserting duplicates.
 - Follow the Android system light or dark theme.
 - In-app HTML preview.
 - Current file name, language, and unsaved-change status.
 - Large files fall back to plain text highlighting to keep editing responsive.
-
-## Legacy CodeMirror features
-
-The classic editor remains available from the overflow menu while the native editor continues to gain features. It currently provides:
-
-- CodeMirror 6 language modes and syntax highlighting.
-- Multiple open-file tabs.
-- Project folder browsing and file operations.
-- HTML preview with project-relative resources.
-
-The legacy screen is retained as a fallback; it is not the primary launcher experience.
 
 ## Supported native highlighting
 
@@ -59,14 +47,10 @@ HTML, CSS, JavaScript, JSON, XML, SVG, and Markdown. Other extensions are displa
 ## Build
 
 ```bash
-cd editor
-npm install
-npm run build
-cd ..
 gradle :app:assembleDebug
 ```
 
-Use JDK 17 and Android SDK 35. GitHub Actions builds the editor assets before assembling the Android APK.
+Use JDK 17 and Android SDK 35. GitHub Actions runs native editor unit tests and assembles the Android APK.
 
 ## Automatic builds and releases
 
@@ -77,4 +61,4 @@ GitHub Actions builds the debug APK when relevant app, editor, Gradle, or workfl
 
 ## Project status
 
-The native editor now includes syntax colouring, bracket/quote pairing, smart indentation, and synchronized line-number scrolling. Native autocomplete, native multi-tab editing, and full native project-folder management remain future milestones. Unit tests cover editor pairing and save MIME mapping; real-device interaction tests are still required. The classic CodeMirror editor is preserved as a fallback while those capabilities are migrated.
+The native editor now includes syntax colouring, bracket/quote pairing, smart indentation, and synchronized line-number scrolling. Native autocomplete, native multi-tab editing, and full native project-folder management remain future milestones. Unit tests cover editor pairing and save MIME mapping; real-device interaction tests are still required. The classic CodeMirror editor has been removed; the Compose editor is the only code-editing interface.
