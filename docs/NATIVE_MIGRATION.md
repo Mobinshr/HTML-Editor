@@ -1,25 +1,22 @@
-# Native migration
+# Native editor
 
-The migration moves the primary editor experience to Kotlin + Jetpack Compose while retaining the previous CodeMirror implementation as a fallback until feature parity is reached.
+The application uses one native Kotlin + Jetpack Compose editor. The former CodeMirror screen and its bundled web assets have been removed.
 
-## Native milestone 1
-- Native launcher, toolbar, document open/save flows, editor surface, and HTML preview container.
-- HTML preview remains an isolated Android WebView because it must execute browser HTML/CSS/JavaScript.
-- Existing CodeMirror screen remains available from the native editor overflow menu.
+## Current architecture
+- Native Compose toolbar, document open/save flows, editor surface, line-number gutter, and status strip.
+- Compose-based syntax colouring for HTML, CSS, JavaScript, JSON, XML, SVG, and Markdown.
+- Android Storage Access Framework for user-selected documents.
+- Android WebView is isolated to HTML preview; it is not used for code editing.
 
-## Native milestone 2
-- Added native syntax colouring for HTML, CSS, JavaScript, JSON, XML, SVG, and Markdown.
-- Highlighting is applied through Compose VisualTransformation, so the primary editor does not load CodeMirror or editor JavaScript.
-- Files larger than 120,000 characters fall back to plain text to avoid making typing sluggish.
-
-## Native milestone 3
-- Automatic closing pairs for brackets, braces, parentheses, single/double quotes, and backticks.
+## Editing assistance
+- Automatic closing pairs for brackets, braces, parentheses, quotes, and backticks.
+- Automatic angle-bracket pairing for HTML, XML, and SVG files only.
+- Typing an existing closing character skips it rather than duplicating it.
 - Smart indentation after Enter, with an inner line and aligned closing line for common bracket blocks.
-- Shared vertical scroll state keeps the line-number gutter aligned with the code area.
 - Input assistance only handles single-character insertions; paste and replacement operations remain unchanged.
 
 ## Follow-up work
 - Add native autocomplete and multi-tab editing.
-- Migrate SAF project-folder browsing and file operations.
-- Keep the same application ID and stable debug certificate so preview builds can be installed as updates.
-- Continue using WebView only where browser rendering is required for HTML preview.
+- Consider a native project-folder browser and file operations.
+- Keep the same application ID and stable debug certificate so new builds can be installed as updates.
+- Keep WebView only where browser rendering is required for HTML preview.
