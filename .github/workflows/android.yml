@@ -83,6 +83,9 @@ jobs:
           fi
           echo "Stable signing certificate verified: $ACTUAL_SHA1"
 
+      - name: Run native editor unit tests
+        run: gradle :app:testDebugUnitTest
+
       - name: Build debug APK
         run: gradle :app:assembleDebug
 
