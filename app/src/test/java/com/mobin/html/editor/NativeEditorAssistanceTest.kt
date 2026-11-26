@@ -69,6 +69,30 @@ class NativeEditorAssistanceTest {
     }
 
     @Test
+    fun cursorMetricsHandleEmptyAndSingleLineText() {
+        assertEquals(
+            EditorCursorMetrics(lineCount = 1, cursorLine = 1, cursorColumn = 1),
+            calculateEditorCursorMetrics("", 0)
+        )
+        assertEquals(
+            EditorCursorMetrics(lineCount = 1, cursorLine = 1, cursorColumn = 4),
+            calculateEditorCursorMetrics("abc", 3)
+        )
+    }
+
+    @Test
+    fun cursorMetricsHandleMultipleLinesAndTrailingNewline() {
+        assertEquals(
+            EditorCursorMetrics(lineCount = 3, cursorLine = 2, cursorColumn = 2),
+            calculateEditorCursorMetrics("abc\ndef\n", 5)
+        )
+        assertEquals(
+            EditorCursorMetrics(lineCount = 3, cursorLine = 3, cursorColumn = 1),
+            calculateEditorCursorMetrics("abc\ndef\n", 8)
+        )
+    }
+
+    @Test
     fun mimeTypeFollowsFileExtension() {
         assertEquals("text/html", mimeTypeForFileName("page.html"))
         assertEquals("text/css", mimeTypeForFileName("styles.css"))
