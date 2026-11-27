@@ -119,6 +119,8 @@ private val LightPalette = EditorPalette(
     saved = Color(0xFF26875D)
 )
 
+private const val MAX_DOCUMENT_CHARACTERS = 512_000
+
 class NativeMainActivity : ComponentActivity() {
     private enum class PendingAction { OPEN, EXIT }
 
@@ -260,8 +262,21 @@ class NativeMainActivity : ComponentActivity() {
         lifecycleScope.launch {
             try {
                 val content = withContext(Dispatchers.IO) {
-                    contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                    val input = contentResolver.openInputStream(uri)
                         ?: throw IllegalStateException("فایل قابل خواندن نیست")
+                    input.bufferedReader(Charsets.UTF_8).use { reader ->
+                        val output = StringBuilder()
+                        val buffer = CharArray(8192)
+                        while (true) {
+                            val count = reader.read(buffer)
+                            if (count < 0) break
+                            if (output.length + count > MAX_DOCUMENT_CHARACTERS) {
+                                throw IllegalStateException("این فایل از سقف ۵۱۲ هزار نویسه بزرگ‌تر است؛ برای جلوگیری از کندی و مصرف حافظه باز نشد")
+                            }
+                            output.append(buffer, 0, count)
+                        }
+                        output.toString()
+                    }
                 }
                 fileUri = uri
                 fileName = queryName(uri) ?: "Untitled.html"

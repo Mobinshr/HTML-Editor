@@ -72,14 +72,14 @@ jobs:
       - name: Run native editor unit tests
         run: gradle :app:testDebugUnitTest
 
-      - name: Build debug APK
-        run: gradle :app:assembleDebug
+      - name: Build optimized release APK
+        run: gradle :app:assembleRelease
 
       - name: Verify APK signing certificate
         run: |
           set -euo pipefail
           EXPECTED_SHA1="85EFC050123C89D9DA54763C70E6359DE107EAB2"
-          APK="app/build/outputs/apk/debug/app-debug.apk"
+          APK="app/build/outputs/apk/release/app-release.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" | tee /tmp/apk-certificate.txt
           ACTUAL_SHA1="$(awk -F': ' '/certificate SHA-1 digest:/ { gsub(":", "", $2); print toupper($2); exit }' /tmp/apk-certificate.txt)"
           if [ "$ACTUAL_SHA1" != "$EXPECTED_SHA1" ]; then
@@ -94,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: html-editor-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -130,7 +130,7 @@ jobs:
           done < <(gh release list --repo "$REPOSITORY" --limit 100 --json tagName --jq '.[].tagName')
 
           # Keep one stable tag and one stable download URL.
-          gh release create latest release-assets/app-debug.apk \
+          gh release create latest release-assets/app-release.apk \
             --repo "$REPOSITORY" \
             --title "HTML Editor $VERSION_NAME (Latest)" \
             --notes "Latest automatic build of HTML Editor.\n\nApp version: $VERSION_NAME\nCommit: $GITHUB_SHA"

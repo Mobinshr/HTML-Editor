@@ -12,8 +12,8 @@ android {
         applicationId = "com.mobin.html.editor"
         minSdk = 23
         targetSdk = 35
-        versionCode = 19
-        versionName = "1.9.0"
+        versionCode = 20
+        versionName = "1.9.1"
     }
 
     signingConfigs {
@@ -30,7 +30,9 @@ android {
             signingConfig = signingConfigs.getByName("stableDebug")
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("stableDebug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

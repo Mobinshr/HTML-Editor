@@ -1,6 +1,6 @@
 # HTML Editor
 
-**Latest app version:** 1.9.0 (versionCode 19)
+**Latest app version:** 1.9.1 (versionCode 20)
 
 <p align="center">
   <img src="assets/images/icon.webp" alt="HTML Editor app icon" width="180" />
@@ -65,3 +65,10 @@ GitHub Actions builds the debug APK when relevant app, editor, Gradle, or workfl
 ## Project status
 
 The native editor now includes syntax colouring, bracket/quote pairing, smart indentation, and synchronized line-number scrolling. Native autocomplete, native multi-tab editing, and full native project-folder management remain future milestones. Unit tests cover editor pairing and save MIME mapping; real-device interaction tests are still required. The Compose editor is the only code-editing interface.
+
+
+## Performance and release notes (1.9.1)
+
+- Opening text documents is bounded to 512,000 characters to prevent unbounded memory growth on large files.
+- Files exceeding the limit are rejected with an in-app explanation; the current editor buffer is not replaced on a failed open.
+- Published APKs are optimized release builds with R8 and resource shrinking, signed with the existing stable application key.
