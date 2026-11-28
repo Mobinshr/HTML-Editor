@@ -12,8 +12,8 @@ android {
         applicationId = "com.mobin.html.editor"
         minSdk = 23
         targetSdk = 35
-        versionCode = 20
-        versionName = "1.9.1"
+        versionCode = 21
+        versionName = "1.9.2"
     }
 
     signingConfigs {
@@ -49,6 +49,7 @@ android {
 }
 
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.google.android.material:material:1.12.0")
 
     implementation(platform("androidx.compose:compose-bom:2024.09.03"))

@@ -467,6 +467,7 @@ private fun NativeEditorScreen(
                 IconButton(onClick = onPreview, modifier = Modifier.size(44.dp)) {
                     Icon(Icons.Default.PlayArrow, contentDescription = "پیش‌نمایش", tint = palette.primaryAccent)
                 }
+                AppUpdateControl()
                 Box {
                     IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(44.dp)) {
                         Icon(Icons.Default.MoreVert, contentDescription = "گزینه‌های بیشتر", tint = palette.mainText)
