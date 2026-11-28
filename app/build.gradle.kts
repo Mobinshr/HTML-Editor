@@ -12,8 +12,8 @@ android {
         applicationId = "com.mobin.html.editor"
         minSdk = 23
         targetSdk = 35
-        versionCode = 22
-        versionName = "1.9.3"
+        versionCode = 23
+        versionName = "1.9.4"
     }
 
     signingConfigs {

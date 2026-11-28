@@ -132,7 +132,7 @@ jobs:
           done < <(gh release list --repo "$REPOSITORY" --limit 100 --json tagName --jq '.[].tagName')
 
           # Keep one stable tag and one stable download URL.
-          NOTES=$(printf 'Latest automatic build of HTML Editor.\n\nRelease purpose: verify in-app update delivery.\nApp version: %s\nVersion code: %s\nPackage: com.mobin.html.editor\nMinimum Android: 6.0 (API 23)\nCommit: %s' "$VERSION_NAME" "$VERSION_CODE" "$GITHUB_SHA")
+          NOTES=$(printf 'Latest automatic build of HTML Editor.\n\nAutomatically deletes the downloaded APK after a successful app replacement.\nApp version: %s\nVersion code: %s\nPackage: com.mobin.html.editor\nMinimum Android: 6.0 (API 23)\nCommit: %s' "$VERSION_NAME" "$VERSION_CODE" "$GITHUB_SHA")
           gh release create latest release-assets/app-release.apk \
             --repo "$REPOSITORY" \
             --title "HTML Editor $VERSION_NAME (Latest)" \
