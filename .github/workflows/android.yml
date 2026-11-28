@@ -135,4 +135,5 @@ jobs:
           gh release create latest release-assets/app-release.apk \
             --repo "$REPOSITORY" \
             --title "HTML Editor $VERSION_NAME (Latest)" \
-            --notes "Latest automatic build of HTML Editor.\n\nApp version: $VERSION_NAME\nVersion code: $VERSION_CODE\nPackage: com.mobin.html.editor\nMinimum Android: 6.0 (API 23)\nCommit: $GITHUB_SHA"
+          NOTES=$(printf 'Latest automatic build of HTML Editor.\n\nApp version: %s\nVersion code: %s\nPackage: com.mobin.html.editor\nMinimum Android: 6.0 (API 23)\nCommit: %s' "$VERSION_NAME" "$VERSION_CODE" "$GITHUB_SHA")
+            --notes "$NOTES"
